@@ -1,0 +1,14 @@
+*.cmp
+*.tst
+*.out
+demo
+*.*~
+*.hack
+*.asm
+*.hack
+*.exe
+*.code-workspace
+*.test
+tools
+
+!*Compare.hack

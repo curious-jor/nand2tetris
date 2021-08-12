@@ -1,0 +1,100 @@
+// This file is part of www.nand2tetris.org
+// and the book "The Elements of Computing Systems"
+// by Nisan and Schocken, MIT Press.
+// File name: projects/05/CPU.hdl
+
+/**
+ * The Hack CPU (Central Processing unit), consisting of an ALU,
+ * two registers named A and D, and a program counter named PC.
+ * The CPU is designed to fetch and execute instructions written in 
+ * the Hack machine language. In particular, functions as follows:
+ * Executes the inputted instruction according to the Hack machine 
+ * language specification. The D and A in the language specification
+ * refer to CPU-resident registers, while M refers to the external
+ * memory location addressed by A, i.e. to Memory[A]. The inM input 
+ * holds the value of this location. If the current instruction needs 
+ * to write a value to M, the value is placed in outM, the address 
+ * of the target location is placed in the addressM output, and the 
+ * writeM control bit is asserted. (When writeM==0, any value may 
+ * appear in outM). The outM and writeM outputs are combinational: 
+ * they are affected instantaneously by the execution of the current 
+ * instruction. The addressM and pc outputs are clocked: although they 
+ * are affected by the execution of the current instruction, they commit 
+ * to their new values only in the next time step. If reset==1 then the 
+ * CPU jumps to address 0 (i.e. pc is set to 0 in next time step) rather 
+ * than to the address resulting from executing the current instruction. 
+ */
+
+CHIP CPU {
+
+    IN  inM[16],         // M value input  (M = contents of RAM[A])
+        instruction[16], // Instruction for execution
+        reset;           // Signals whether to re-start the current
+                         // program (reset==1) or continue executing
+                         // the current program (reset==0).
+
+    OUT outM[16],        // M value output
+        writeM,          // Write to M? 
+        addressM[15],    // Address in data memory (of M)
+        pc[15];          // address of next instruction
+
+    PARTS:
+    // Decode the instruction input  
+    // iBit determines whether to execute A or C instruction
+    And(a=instruction[15], b=true, out=iBit);
+    Not(in=instruction[15], out=AInstruction);
+    Or(a=AInstruction, b=d1, out=loadA);
+    ARegister(in=ARegisterInput, load=loadA, out[0..14]=addressM, out=AOutput);
+
+    // instruction bits 0..14 are zeroed out if iBit codes for A-instruction
+    Mux16(a=false, b=instruction, sel=iBit, out=computeBits);
+
+    // Parse out control bits for C instruction execution
+    And16(a=computeBits, b=true, out[12]=aBit, out[11]=c1, out[10]=c2, out[9]=c3, out[8]=c4, out[7]=c5, out[6]=c6, out[5]=d1, out[4]=d2, out[3]=d3, out[2]=j1, out[1]=j2, out[0]=j3);
+    Mux16(a=AOutput, b=inM, sel=aBit, out=ALUMemoryInput);
+    DRegister(in=ALUOutput, load=loadD, out=DOutput);
+    ALU(x=DOutput, y=ALUMemoryInput, zx=c1, nx=c2, zy=c3, ny=c4, f=c5, no=c6, out=ALUOutput, zr=ALUOutputIsZero, ng=ALUOutputIsNegative);
+
+    // D Register load flag depends on d2 d3 bits
+    DMux4Way(in=true, sel[0]=d3, sel[1]=d2, a=dontLoadD1, b=dontLoadD2, c=loadD1, d=loadD2);
+    Or(a=loadD1, b=loadD2, out=loadD);
+
+    // A register input depends on d1 bit
+    Mux16(a=instruction, b=ALUOutput, sel=d1, out=ARegisterInput);
+
+    // RAM output and write flag depend on d2 d3 bits
+    Mux4Way16(a=false, b=ALUOutput, c=false, d=ALUOutput, sel[0]=d3, sel[1]=d2, out=outM);
+    DMux4Way(in=true, sel[0]=d3, sel[1]=d2, a=nullWrite, b=storeM1, c=storeD, d=storeM2);
+    Or(a=storeM1, b=storeM2, out=writeM);
+
+    // Next instruction fetching
+
+    // Determine if there's a jump
+    DMux8Way(in=true, sel[0]=j3, sel[1]=j2, sel[2]=j1, a=nullJMP, b=JGT, c=JEQ, d=JGE, e=JLT, f=JNE, g=JLE, h=JMP);
+
+    Not(in=ALUOutputIsZero, out=notzr);
+    Not(in=ALUOutputIsNegative, out=notng);
+
+    And(a=notzr, b=notng, out=notZrAndNotNg);
+    And(a=JGT, b=notZrAndNotNg, out=isJGT); // Jump if > 0
+
+    And(a=ALUOutputIsZero, b=notng, out=zrAndNotNg);
+    And(a=JEQ, b=zrAndNotNg, out=isJEQ); // Jump iff = 0
+
+    Or(a=ALUOutputIsZero, b=notng, out=zrOrNotNg);
+    And(a=JGE, b=zrOrNotNg, out=isJGE); // Jump if >= 0
+
+    And(a=notzr, b=ALUOutputIsNegative, out=notZrAndNg);
+    And(a=JLT, b=notZrAndNg, out=isJLT); // Jump if < 0
+
+    Or(a=notzr, b=ALUOutputIsNegative, out=notZrOrNg);
+    And(a=JNE, b=notZrOrNg, out=isJNE); // Jump iff != 0
+
+    Or(a=ALUOutputIsZero, b=ALUOutputIsNegative, out=zrOrNg);
+    And(a=JLE, b=zrOrNg, out=isJLE); // Jump if < 0
+
+    Or8Way(in[0]=false, in[1]=isJGT, in[2]=isJEQ, in[3]=isJGE, in[4]=isJLT, in[5]=isJNE, in[6]=isJLE, in[7]=JMP, out=toJMP);
+
+    DMux(in=true, sel=toJMP, a=incPC, b=loadN);
+    PC(in=AOutput, load=loadN, inc=incPC, reset=reset, out[0..14]=pc);
+}
