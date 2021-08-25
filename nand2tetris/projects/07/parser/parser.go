@@ -69,6 +69,10 @@ func isArithmeticCommand(command string) bool {
 	}
 }
 
+func (p *Parser) parseArithmeticCommand() *Command {
+	return &Command{ct: C_ARITHMETIC, arg1: p.lexeme.value, arg2: ""}
+}
+
 func (p *Parser) parsePushCommand() *Command {
 	token, segment := p.lxr.NextToken() // consume segment
 	if token != lexer.ARG {
@@ -94,7 +98,7 @@ func (p *Parser) Advance() {
 	case lexer.COMMAND:
 		{
 			if isArithmeticCommand(p.lexeme.value) {
-				p.cmd = &Command{ct: C_ARITHMETIC, arg1: p.lexeme.value, arg2: ""}
+				p.cmd = p.parseArithmeticCommand()
 			}
 
 			if p.lexeme.value == "push" {
