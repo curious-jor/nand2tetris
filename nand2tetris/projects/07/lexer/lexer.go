@@ -133,3 +133,12 @@ func (l *Lexer) NextToken() (Token, string) {
 	_ = l.getChar()
 	return ILLEGAL, string(thisChar)
 }
+
+func (l *Lexer) HasMoreTokens() bool {
+	nextByte := 1
+	_, err := l.r.Peek(nextByte)
+	if err != nil && err != io.EOF {
+		panic(err)
+	}
+	return err == nil
+}
