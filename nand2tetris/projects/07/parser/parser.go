@@ -4,14 +4,9 @@ import (
 	"VMtranslator/lexer"
 	"bufio"
 	"fmt"
-	"log"
 	"os"
+	"strconv"
 )
-
-type lexeme struct {
-	token lexer.Token
-	value string
-}
 
 type CommandType int
 
@@ -27,17 +22,35 @@ const (
 	C_CALL
 )
 
+var commandTypes = []string{
+	C_ARITHMETIC: "C_ARITHMETIC",
+	C_PUSH:       "C_PUSH",
+	C_POP:        "C_POP",
+	C_LABEL:      "C_LABEL",
+	C_GOTO:       "C_GOTO",
+	C_IF:         "C_IF",
+	C_FUNCTION:   "C_FUNCTION",
+	C_RETURN:     "C_RETURN",
+	C_CALL:       "C_CALL",
+}
+
+func (ct CommandType) String() string {
+	return commandTypes[ct]
+}
+
 type Command struct {
 	ct   CommandType // the type of command
 	arg1 string
-	arg2 string
+	arg2 int
 }
+
+var emptyArg2 = -1
 
 type Parser struct {
 	f      *os.File
 	rdr    *bufio.Reader
 	lxr    *lexer.Lexer
-	lexeme *lexeme
+	lexeme *lexer.Lexeme
 	cmd    *Command
 }
 
@@ -46,13 +59,13 @@ func NewParser(file *os.File) *Parser {
 	lexer := lexer.NewLexer(file)
 
 	// Load the first token from the input
-	tok, val := lexer.NextToken()
-	initialLex := lexeme{token: tok, value: val}
+	initialLex := lexer.NextToken()
 	return &Parser{
 		f:      file,
 		rdr:    reader,
 		lxr:    lexer,
-		lexeme: &initialLex,
+		lexeme: initialLex,
+		cmd:    nil,
 	}
 }
 
@@ -70,44 +83,81 @@ func isArithmeticCommand(command string) bool {
 }
 
 func (p *Parser) parseArithmeticCommand() *Command {
-	return &Command{ct: C_ARITHMETIC, arg1: p.lexeme.value, arg2: ""}
+	return &Command{ct: C_ARITHMETIC, arg1: p.lexeme.Value, arg2: emptyArg2}
 }
 
 func (p *Parser) parsePushCommand() *Command {
-	token, segment := p.lxr.NextToken() // consume segment
-	if token != lexer.ARG {
-		fmt.Printf("expected ARG token while parsing \"push\" command got %s instead\n", token)
-		return &Command{ct: C_PUSH, arg1: segment, arg2: ""}
-	}
-	token, index := p.lxr.NextToken() // consume index
-	if token != lexer.ARG {
-		fmt.Printf("expected ARG token while parsing \"push\" command got %s instead\n", token)
-		return &Command{ct: C_PUSH, arg1: segment, arg2: index}
+	segment := p.lxr.NextToken() // consume segment
+	if segment.Token != lexer.ARG {
+		fmt.Printf("expected ARG token while parsing \"push\" command got %s instead\n", segment.Token)
+		return &Command{ct: C_PUSH, arg1: segment.Value, arg2: emptyArg2}
 	}
 
-	return &Command{ct: C_PUSH, arg1: segment, arg2: index}
+	index := p.lxr.NextToken() // consume index
+	if index.Token != lexer.ARG {
+		fmt.Printf("expected ARG token while parsing \"push\" command got %s instead\n", index.Token)
+	}
+
+	indexInt, err := strconv.Atoi(index.Value)
+	if err != nil {
+		fmt.Printf("could not convert %q to int while parsing push command (%s, %q)", index, index.Token.String(), index)
+		return &Command{ct: C_PUSH, arg1: segment.Value, arg2: emptyArg2}
+	}
+
+	return &Command{ct: C_PUSH, arg1: segment.Value, arg2: indexInt}
 }
 
 func (p *Parser) Advance() {
 	if !p.HasMoreCommands() {
-		log.Panicln("attempted to advance a parser with no commands left")
+		fmt.Println("attempted to advance a parser with no commands left")
 		return
 	}
 
-	switch p.lexeme.token {
+	switch p.lexeme.Token {
 	case lexer.COMMAND:
 		{
-			if isArithmeticCommand(p.lexeme.value) {
+			if isArithmeticCommand(p.lexeme.Value) {
 				p.cmd = p.parseArithmeticCommand()
 			}
 
-			if p.lexeme.value == "push" {
+			if p.lexeme.Value == "push" {
 				p.cmd = p.parsePushCommand()
 			}
 		}
 	}
 
 	// Update parser with next lexeme
-	t, v := p.lxr.NextToken()
-	p.lexeme = &lexeme{token: t, value: v}
+
+	p.lexeme = p.lxr.NextToken()
+}
+
+var emptyCommandType = -1
+
+func (p *Parser) CommandType() CommandType {
+	if p.cmd == nil {
+		fmt.Println("attempted to get command type of empty command")
+		return CommandType(emptyCommandType)
+	}
+	return p.cmd.ct
+}
+
+func (p *Parser) Arg1() string {
+	if p.CommandType() == C_RETURN {
+		fmt.Println("attempted to call Arg1 on a C_RETURN command")
+		return ""
+	}
+
+	return p.cmd.arg1
+}
+
+func commandHasArg2(ct CommandType) bool {
+	return ct == C_PUSH || ct == C_POP || ct == C_FUNCTION || ct == C_CALL
+}
+
+func (p *Parser) Arg2() int {
+	if curr := p.CommandType(); !commandHasArg2(curr) {
+		fmt.Printf("attempted to call Arg2 on a command with the incorrect type. got %#v\n", curr)
+	}
+
+	return p.cmd.arg2
 }

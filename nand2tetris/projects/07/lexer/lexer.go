@@ -73,7 +73,12 @@ func isDigit(ch rune) bool {
 	return ch >= '0' && ch <= '9'
 }
 
-func (l *Lexer) NextToken() (Token, string) {
+type Lexeme struct {
+	Token Token
+	Value string
+}
+
+func (l *Lexer) NextToken() *Lexeme {
 	var currChar = ' '
 
 	for isWhitespace(currChar) {
@@ -82,7 +87,7 @@ func (l *Lexer) NextToken() (Token, string) {
 
 	if currChar == eofRune {
 		l.prev = EOF
-		return EOF, EOF.String()
+		return &Lexeme{EOF, EOF.String()}
 	}
 
 	if currChar == newlineRune {
@@ -103,17 +108,17 @@ func (l *Lexer) NextToken() (Token, string) {
 
 		if _, err := strconv.ParseInt(string(charSeq), 10, 16); err == nil {
 			l.prev = ARG
-			return ARG, string(charSeq)
+			return &Lexeme{ARG, string(charSeq)}
 		}
 
 		if l.prev == NEWLINE {
 			l.prev = COMMAND
-			return COMMAND, string(charSeq)
+			return &Lexeme{COMMAND, string(charSeq)}
 		}
 
 		if l.prev == COMMAND || l.prev == ARG {
 			l.prev = ARG
-			return ARG, string(charSeq)
+			return &Lexeme{ARG, string(charSeq)}
 		}
 	}
 
@@ -131,7 +136,7 @@ func (l *Lexer) NextToken() (Token, string) {
 	thisChar := currChar
 	l.prev = ILLEGAL
 	_ = l.getChar()
-	return ILLEGAL, string(thisChar)
+	return &Lexeme{ILLEGAL, string(thisChar)}
 }
 
 func (l *Lexer) HasMoreTokens() bool {
@@ -141,4 +146,8 @@ func (l *Lexer) HasMoreTokens() bool {
 		panic(err)
 	}
 	return err == nil
+}
+
+func (a *Lexeme) Equals(b *Lexeme) bool {
+	return a.Token == b.Token && a.Value == b.Value
 }
