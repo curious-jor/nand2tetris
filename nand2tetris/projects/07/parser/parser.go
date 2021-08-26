@@ -55,6 +55,10 @@ type Parser struct {
 }
 
 func NewParser(file *os.File) *Parser {
+	if file == nil {
+		return &Parser{}
+	}
+
 	reader := bufio.NewReader(file)
 	lexer := lexer.NewLexer(file)
 

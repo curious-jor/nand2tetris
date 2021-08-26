@@ -101,3 +101,52 @@ func TestCommandType(t *testing.T) {
 		t.Fatal(err)
 	}
 }
+
+func TestArg1(t *testing.T) {
+	parser := NewParser(nil)
+
+	passingTests := []struct {
+		name     string
+		input    *Command
+		expected string
+	}{
+		{"C_ARITHMETIC add", &Command{ct: C_ARITHMETIC, arg1: "add"}, "add"},
+		{"C_ARITHMETIC sub", &Command{ct: C_ARITHMETIC, arg1: "add"}, "add"},
+		{"C_ARITHMETIC neg", &Command{ct: C_ARITHMETIC, arg1: "add"}, "add"},
+		{"C_ARITHMETIC eq", &Command{ct: C_ARITHMETIC, arg1: "add"}, "add"},
+		{"C_ARITHMETIC gt", &Command{ct: C_ARITHMETIC, arg1: "add"}, "add"},
+		{"C_ARITHMETIC lt", &Command{ct: C_ARITHMETIC, arg1: "add"}, "add"},
+		{"C_ARITHMETIC and", &Command{ct: C_ARITHMETIC, arg1: "add"}, "add"},
+		{"C_ARITHMETIC or", &Command{ct: C_ARITHMETIC, arg1: "add"}, "add"},
+		{"C_ARITHMETIC not", &Command{ct: C_ARITHMETIC, arg1: "add"}, "add"},
+		{"C_PUSH push constant 7", &Command{ct: C_PUSH, arg1: "constant", arg2: 7}, "constant"},
+	}
+
+	for _, test := range passingTests {
+		test := test
+		t.Run(test.name, func(t *testing.T) {
+			parser.cmd = test.input
+			if actual := parser.Arg1(); test.expected != actual {
+				t.Errorf("expected %q got %q", test.expected, actual)
+			}
+		})
+	}
+
+	failingTests := []struct {
+		name     string
+		input    *Command
+		expected string
+	}{
+		{"C_RETURN arg1", &Command{ct: C_RETURN, arg1: "return"}, ""},
+	}
+
+	for _, test := range failingTests {
+		test := test
+		t.Run(test.name, func(t *testing.T) {
+			parser.cmd = test.input
+			if actual := parser.Arg1(); test.expected != actual {
+				t.Errorf("expected %q got %q", test.expected, actual)
+			}
+		})
+	}
+}
