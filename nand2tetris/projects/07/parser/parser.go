@@ -161,6 +161,7 @@ func commandHasArg2(ct CommandType) bool {
 func (p *Parser) Arg2() int {
 	if curr := p.CommandType(); !commandHasArg2(curr) {
 		fmt.Printf("attempted to call Arg2 on a command with the incorrect type. got %#v\n", curr)
+		return emptyArg2
 	}
 
 	return p.cmd.arg2

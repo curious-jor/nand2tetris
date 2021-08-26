@@ -150,3 +150,35 @@ func TestArg1(t *testing.T) {
 		})
 	}
 }
+
+func TestArg2(t *testing.T) {
+	parser := NewParser(nil)
+
+	tests := []struct {
+		name     string
+		input    *Command
+		expected int
+	}{
+		{"C_ARITHMETIC add", &Command{ct: C_ARITHMETIC, arg1: "add"}, emptyArg2},
+		{"C_ARITHMETIC sub", &Command{ct: C_ARITHMETIC, arg1: "add"}, emptyArg2},
+		{"C_ARITHMETIC neg", &Command{ct: C_ARITHMETIC, arg1: "add"}, emptyArg2},
+		{"C_ARITHMETIC eq", &Command{ct: C_ARITHMETIC, arg1: "add"}, emptyArg2},
+		{"C_ARITHMETIC gt", &Command{ct: C_ARITHMETIC, arg1: "add"}, emptyArg2},
+		{"C_ARITHMETIC lt", &Command{ct: C_ARITHMETIC, arg1: "add"}, emptyArg2},
+		{"C_ARITHMETIC and", &Command{ct: C_ARITHMETIC, arg1: "add"}, emptyArg2},
+		{"C_ARITHMETIC or", &Command{ct: C_ARITHMETIC, arg1: "add"}, emptyArg2},
+		{"C_ARITHMETIC not", &Command{ct: C_ARITHMETIC, arg1: "add"}, emptyArg2},
+		{"C_PUSH push constant 7", &Command{ct: C_PUSH, arg1: "constant", arg2: 7}, 7},
+	}
+
+	for _, test := range tests {
+		test := test
+		t.Run(test.name, func(t *testing.T) {
+			parser.cmd = test.input
+			if actual := parser.Arg2(); test.expected != actual {
+				t.Errorf("expected %q got %q", test.expected, actual)
+			}
+		})
+	}
+
+}
