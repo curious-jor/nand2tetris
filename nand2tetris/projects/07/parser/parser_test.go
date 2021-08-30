@@ -60,6 +60,33 @@ func TestAdvanceSimpleAdd(t *testing.T) {
 
 }
 
+func TestAdvanceStackTest(t *testing.T) {
+	f, err := os.Open("../StackArithmetic/StackTest/Stacktest.vm")
+	if err != nil {
+		panic(err)
+	}
+	defer f.Close()
+
+	parser := NewParser(f)
+	parser.Advance()
+
+	linesAdvanced := 1
+	for parser.HasMoreCommands() {
+		parser.Advance()
+		linesAdvanced += 1
+		t.Log(parser.cmd)
+	}
+
+	if linesAdvanced != 38 {
+		t.Errorf("expected 38 lines advanced but got %d", linesAdvanced)
+	}
+
+	if err := parser.Advance(); err == nil {
+		t.Errorf("expected non-nil error when advancing parser with no more commands")
+	}
+
+}
+
 func TestCommandType(t *testing.T) {
 	parser := NewParser(nil)
 	tests := []struct {
