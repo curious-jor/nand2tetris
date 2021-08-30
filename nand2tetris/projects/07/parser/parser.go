@@ -135,12 +135,12 @@ func (p *Parser) Advance() {
 	p.lexeme = p.lxr.NextToken()
 }
 
-var emptyCommandType = -1
+var emptyCommandType = CommandType(-1)
 
 func (p *Parser) CommandType() CommandType {
 	if p.cmd == nil {
 		fmt.Println("attempted to get command type of empty command")
-		return CommandType(emptyCommandType)
+		return emptyCommandType
 	}
 	return p.cmd.ct
 }

@@ -61,45 +61,35 @@ func TestAdvance(t *testing.T) {
 }
 
 func TestCommandType(t *testing.T) {
-	testFileContents := "\n add \n sub \n neg \n eq \n gt \n lt \n and \n or \n not \n push constant 1 \n"
-	testFile, err := os.CreateTemp(".", "*.vm")
-	if err != nil {
-		t.Fatal(err)
+	parser := NewParser(nil)
+	tests := []struct {
+		name     string
+		input    *Command
+		expected CommandType
+	}{
+		{"add", &Command{ct: C_ARITHMETIC, arg1: "add"}, C_ARITHMETIC},
+		{"sub", &Command{ct: C_ARITHMETIC, arg1: "add"}, C_ARITHMETIC},
+		{"neg", &Command{ct: C_ARITHMETIC, arg1: "add"}, C_ARITHMETIC},
+		{"eq", &Command{ct: C_ARITHMETIC, arg1: "add"}, C_ARITHMETIC},
+		{"gt", &Command{ct: C_ARITHMETIC, arg1: "add"}, C_ARITHMETIC},
+		{"lt", &Command{ct: C_ARITHMETIC, arg1: "add"}, C_ARITHMETIC},
+		{"and", &Command{ct: C_ARITHMETIC, arg1: "add"}, C_ARITHMETIC},
+		{"or", &Command{ct: C_ARITHMETIC, arg1: "add"}, C_ARITHMETIC},
+		{"not", &Command{ct: C_ARITHMETIC, arg1: "add"}, C_ARITHMETIC},
+		{"push", &Command{ct: C_PUSH, arg1: "constant", arg2: 7}, C_PUSH},
+		{"empty", nil, emptyCommandType},
 	}
 
-	if n, err := testFile.WriteString(testFileContents); n < len(testFileContents) || err != nil {
-		t.Fatal(err)
+	for _, test := range tests {
+		test := test
+		t.Run(test.name, func(t *testing.T) {
+			parser.cmd = test.input
+			if actual := parser.CommandType(); test.expected != actual {
+				t.Errorf("expected %s got %s", test.expected.String(), parser.CommandType().String())
+			}
+		})
 	}
 
-	testFile.Seek(0, 0)
-
-	parser := NewParser(testFile)
-	expected := []CommandType{
-		C_ARITHMETIC,
-		C_ARITHMETIC,
-		C_ARITHMETIC,
-		C_ARITHMETIC,
-		C_ARITHMETIC,
-		C_ARITHMETIC,
-		C_ARITHMETIC,
-		C_ARITHMETIC,
-		C_ARITHMETIC,
-		C_PUSH,
-	}
-
-	for i, expectedCT := range expected {
-		parser.Advance()
-		if actual := parser.CommandType(); expectedCT != actual {
-			t.Errorf("expected command type %s but got %s on line %d", expectedCT.String(), actual.String(), i)
-		}
-	}
-
-	if err := testFile.Close(); err != nil {
-		t.Fatal(err)
-	}
-	if err := os.Remove(testFile.Name()); err != nil {
-		t.Fatal(err)
-	}
 }
 
 func TestArg1(t *testing.T) {
@@ -120,6 +110,7 @@ func TestArg1(t *testing.T) {
 		{"C_ARITHMETIC or", &Command{ct: C_ARITHMETIC, arg1: "add"}, "add"},
 		{"C_ARITHMETIC not", &Command{ct: C_ARITHMETIC, arg1: "add"}, "add"},
 		{"C_PUSH push constant 7", &Command{ct: C_PUSH, arg1: "constant", arg2: 7}, "constant"},
+		{"C_RETURN arg1", &Command{ct: C_RETURN, arg1: "return"}, ""},
 	}
 
 	for _, test := range passingTests {
@@ -132,23 +123,6 @@ func TestArg1(t *testing.T) {
 		})
 	}
 
-	failingTests := []struct {
-		name     string
-		input    *Command
-		expected string
-	}{
-		{"C_RETURN arg1", &Command{ct: C_RETURN, arg1: "return"}, ""},
-	}
-
-	for _, test := range failingTests {
-		test := test
-		t.Run(test.name, func(t *testing.T) {
-			parser.cmd = test.input
-			if actual := parser.Arg1(); test.expected != actual {
-				t.Errorf("expected %q got %q", test.expected, actual)
-			}
-		})
-	}
 }
 
 func TestArg2(t *testing.T) {
