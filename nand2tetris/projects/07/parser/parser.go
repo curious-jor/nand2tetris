@@ -3,6 +3,7 @@ package parser
 import (
 	"VMtranslator/lexer"
 	"bufio"
+	"errors"
 	"fmt"
 	"os"
 	"strconv"
@@ -86,15 +87,20 @@ func isArithmeticCommand(command string) bool {
 	}
 }
 
-func (p *Parser) parseArithmeticCommand() *Command {
-	return &Command{ct: C_ARITHMETIC, arg1: p.lexeme.Value, arg2: emptyArg2}
+func (p *Parser) parseArithmeticCommand() (*Command, error) {
+	return &Command{ct: C_ARITHMETIC, arg1: p.lexeme.Value, arg2: emptyArg2}, nil
 }
 
-func (p *Parser) parsePushCommand() *Command {
+func (p *Parser) parsePushCommand() (*Command, error) {
 	segment := p.lxr.NextToken() // consume segment
 	if segment.Token != lexer.ARG {
-		fmt.Printf("expected ARG token while parsing \"push\" command got %s instead\n", segment.Token)
-		return &Command{ct: C_PUSH, arg1: segment.Value, arg2: emptyArg2}
+		return &Command{
+				ct: C_PUSH, arg1: segment.Value,
+				arg2: emptyArg2,
+			}, &ParserCouldNotParseError{
+				lxm: segment,
+				msg: fmt.Sprintf("expected ARG token while parsing \"push\" command got %s instead\n", segment.Token),
+			}
 	}
 
 	index := p.lxr.NextToken() // consume index
@@ -104,35 +110,54 @@ func (p *Parser) parsePushCommand() *Command {
 
 	indexInt, err := strconv.Atoi(index.Value)
 	if err != nil {
-		fmt.Printf("could not convert %q to int while parsing push command (%s, %q)", index, index.Token.String(), index)
-		return &Command{ct: C_PUSH, arg1: segment.Value, arg2: emptyArg2}
+		return &Command{
+				ct:   C_PUSH,
+				arg1: segment.Value,
+				arg2: emptyArg2,
+			}, &ParserCouldNotParseError{
+				lxm: index,
+				msg: fmt.Sprintf("could not convert %q to int while parsing push command (%s, %q)", index, index.Token.String(), index),
+			}
 	}
 
-	return &Command{ct: C_PUSH, arg1: segment.Value, arg2: indexInt}
+	return &Command{ct: C_PUSH, arg1: segment.Value, arg2: indexInt}, nil
 }
 
-func (p *Parser) Advance() {
+var ErrParserNoMoreCommands = errors.New("parser has no more commands")
+
+type ParserCouldNotParseError struct {
+	lxm *lexer.Lexeme
+	msg string
+}
+
+func (e *ParserCouldNotParseError) Error() string {
+	return e.msg
+}
+
+func (p *Parser) Advance() error {
 	if !p.HasMoreCommands() {
-		fmt.Println("attempted to advance a parser with no commands left")
-		return
+		return ErrParserNoMoreCommands
 	}
 
+	var parsedCmd *Command
+	var err error
 	switch p.lexeme.Token {
 	case lexer.COMMAND:
 		{
 			if isArithmeticCommand(p.lexeme.Value) {
-				p.cmd = p.parseArithmeticCommand()
+				parsedCmd, err = p.parseArithmeticCommand()
 			}
 
 			if p.lexeme.Value == "push" {
-				p.cmd = p.parsePushCommand()
+				parsedCmd, err = p.parsePushCommand()
 			}
 		}
 	}
+	p.cmd = parsedCmd
 
 	// Update parser with next lexeme
-
 	p.lexeme = p.lxr.NextToken()
+	return err
 }
 
 var emptyCommandType = CommandType(-1)

@@ -31,7 +31,7 @@ func TestInitialization(t *testing.T) {
 	}
 }
 
-func TestAdvance(t *testing.T) {
+func TestAdvanceSimpleAdd(t *testing.T) {
 	f, err := os.Open("../StackArithmetic/SimpleAdd/SimpleAdd.vm")
 	if err != nil {
 		panic(err)
