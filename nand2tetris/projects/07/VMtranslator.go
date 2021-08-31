@@ -1,9 +1,11 @@
 package main
 
 import (
+	"VMtranslator/codewriter"
+	"VMtranslator/parser"
 	"fmt"
 	"os"
-	"path/filepath"
+	"strings"
 )
 
 func main() {
@@ -14,29 +16,34 @@ func main() {
 	}
 	srcPath = os.Args[1]
 
-	srcFile, err := os.Stat(srcPath)
+	srcFile, err := os.Open(srcPath)
 	if err != nil {
 		panic(err)
 	}
 
-	switch mode := srcFile.Mode(); {
-	case mode.IsDir():
-		{
-			fmt.Printf("Translating files in %q\n", srcPath)
-			dirEntries, err := os.ReadDir(srcPath)
-			if err != nil {
-				panic(err)
-			}
-			for _, entry := range dirEntries {
-				if filepath.Ext(entry.Name()) == ".vm" {
-					fmt.Println("Found", entry.Name())
-				}
+	p := parser.NewParser(srcFile)
+	outputFilename := strings.Split(srcPath, ".")[0] + ".asm"
 
-			}
+	outputFile, err := os.Create(outputFilename)
+	if err != nil {
+		panic(err)
+	}
+
+	codeWriter, err := codewriter.NewCodeWriter(outputFile)
+	if err != nil {
+		panic(err)
+	}
+	defer codeWriter.Close()
+
+	for p.HasMoreCommands() {
+		p.Advance()
+
+		if p.CommandType() == parser.C_ARITHMETIC {
+			codeWriter.WriteArithmetic(p.Arg1())
 		}
-	case mode.IsRegular():
-		{
-			fmt.Printf("Translating %q\n", srcPath)
+
+		if p.CommandType() == parser.C_PUSH {
+			codeWriter.WritePushPop(p.CommandType(), p.Arg1(), p.Arg2())
 		}
 	}
 

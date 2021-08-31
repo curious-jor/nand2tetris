@@ -13,12 +13,7 @@ type CodeWriter struct {
 
 func NewCodeWriter(outputFile *os.File) (*CodeWriter, error) {
 	var cw = new(CodeWriter)
-	file, err := os.Open(outputFile.Name())
-	if err != nil {
-		return nil, err
-	}
-
-	cw.outputFile = file
+	cw.outputFile = outputFile
 	return cw, nil
 }
 
@@ -92,14 +87,14 @@ func (cw *CodeWriter) WritePushPop(command parser.CommandType, segment string, i
 	if command == parser.C_PUSH {
 		if segment == "constant" {
 			var output strings.Builder
-			loadConstant := fmt.Sprintf(
-				`@%d
-				D=A
-				@SP
-				A=M
-				M=D
-				`, index)
-			output.WriteString(loadConstant)
+			loadConstant := []string{
+				fmt.Sprintf("@%d", index),
+				"D=A",
+				"@SP",
+				"A=M",
+				"M=D\n",
+			}
+			output.WriteString(strings.Join(loadConstant, "\n"))
 			n, err := cw.outputFile.WriteString(output.String())
 			if err != nil {
 				return err
