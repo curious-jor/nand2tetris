@@ -9,20 +9,27 @@ import (
 )
 
 func main() {
-	var srcPath string
 	if len(os.Args) != 2 {
 		fmt.Println("VMTranslator expects a .vm file or dir containing .vm files")
 		os.Exit(1)
 	}
-	srcPath = os.Args[1]
+	srcPath := os.Args[1]
 
-	srcFile, err := os.Open(srcPath)
+	err := translate(srcPath)
 	if err != nil {
 		panic(err)
 	}
+}
+
+func translate(path string) error {
+	srcFile, err := os.Open(path)
+	if err != nil {
+		return err
+	}
+	defer srcFile.Close()
 
 	p := parser.NewParser(srcFile)
-	outputFilename := strings.Split(srcPath, ".")[0] + ".asm"
+	outputFilename := strings.Split(path, ".")[0] + ".asm"
 
 	outputFile, err := os.Create(outputFilename)
 	if err != nil {
@@ -31,9 +38,8 @@ func main() {
 
 	codeWriter, err := codewriter.NewCodeWriter(outputFile)
 	if err != nil {
-		panic(err)
+		return err
 	}
-	defer codeWriter.Close()
 
 	for p.HasMoreCommands() {
 		p.Advance()
@@ -47,4 +53,9 @@ func main() {
 		}
 	}
 
+	if err := codeWriter.Close(); err != nil {
+		return err
+	}
+
+	return nil
 }
