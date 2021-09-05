@@ -29,7 +29,29 @@ func TestSimpleAdd(t *testing.T) {
 	}
 
 	runCPUEmulator := exec.Command("cmd", "/C", `..\..\tools\CPUEmulator.bat`, testScript)
-	output, err := runCPUEmulator.Output()
+	output, err := runCPUEmulator.CombinedOutput()
+	if err != nil {
+		panic(err)
+	}
+
+	successMsg := "End of script - Comparison ended successfully"
+	if strings.TrimSpace(string(output)) != successMsg {
+		t.Errorf("%s", output)
+	}
+
+}
+
+func TestStackTest(t *testing.T) {
+	inputPath := "StackArithmetic/StackTest/StackTest.vm"
+	testScript := strings.Split(inputPath, ".")[0] + ".tst"
+
+	err := translate(inputPath)
+	if err != nil {
+		panic(err)
+	}
+
+	runCPUEmulator := exec.Command("cmd", "/C", `..\..\tools\CPUEmulator.bat`, testScript)
+	output, err := runCPUEmulator.CombinedOutput()
 	if err != nil {
 		panic(err)
 	}

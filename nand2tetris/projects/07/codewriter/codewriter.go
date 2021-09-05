@@ -9,11 +9,17 @@ import (
 
 type CodeWriter struct {
 	outputFile *os.File
+	eqCounter  int
+	ltCounter  int
+	gtCounter  int
 }
 
 func NewCodeWriter(outputFile *os.File) (*CodeWriter, error) {
 	var cw = new(CodeWriter)
 	cw.outputFile = outputFile
+	cw.eqCounter = 1
+	cw.gtCounter = 1
+	cw.ltCounter = 1
 	return cw, nil
 }
 
@@ -25,42 +31,243 @@ func (cw *CodeWriter) SetFileName(fileName string) error {
 	return nil
 }
 
-// TODO: Implement cases for all nine arithmetic commands
 func (cw *CodeWriter) WriteArithmetic(command string) error {
-	if command == "add" {
-		var output strings.Builder
-		loadArg1 := []string{
-			"@SP",
-			"M=M-1",
-			"A=M",
-			"D=M\n",
-		}
-		loadArg2 := []string{
-			"@SP",
-			"M=M-1",
-			"A=M",
-			"D=D+M\n",
-		}
-		pushResult := []string{
-			"@SP",
-			"A=M",
-			"M=D\n",
-		}
-		output.WriteString(strings.Join(loadArg1, "\n"))
-		output.WriteString(strings.Join(loadArg2, "\n"))
-		output.WriteString(strings.Join(pushResult, "\n"))
+	var output strings.Builder
 
-		n, err := cw.outputFile.WriteString(output.String())
-		if err != nil {
-			return err
+	switch command {
+	case "add":
+		{
+			loadArg1 := []string{
+				"@SP",
+				"AM=M-1",
+				"D=M\n",
+			}
+			loadArg2 := []string{
+				"@SP",
+				"AM=M-1",
+				"D=D+M\n",
+			}
+			pushResult := []string{
+				"@SP",
+				"A=M",
+				"M=D\n",
+			}
+			output.WriteString(strings.Join(loadArg1, "\n"))
+			output.WriteString(strings.Join(loadArg2, "\n"))
+			output.WriteString(strings.Join(pushResult, "\n"))
 		}
-		if n < len(output.String()) {
-			return fmt.Errorf("underwrote string with call to WriteArithmetic with arg: %q", command)
-		}
+	case "sub":
+		{
 
-		if err := cw.writeIncrementSP(); err != nil {
-			return err
+			loadArg1 := []string{
+				"@SP",
+				"AM=M-1",
+				"D=M\n",
+			}
+			loadArg2 := []string{
+				"@SP",
+				"AM=M-1",
+				"D=M-D\n",
+			}
+			pushResult := []string{
+				"@SP",
+				"A=M",
+				"M=D\n",
+			}
+
+			output.WriteString(strings.Join(loadArg1, "\n"))
+			output.WriteString(strings.Join(loadArg2, "\n"))
+			output.WriteString(strings.Join(pushResult, "\n"))
+
 		}
+	case "neg":
+		{
+
+			loadArg1 := []string{
+				"@SP",
+				"AM=M-1",
+				"D=-M\n",
+			}
+			pushResult := []string{
+				"@SP",
+				"A=M",
+				"M=D\n",
+			}
+
+			output.WriteString(strings.Join(loadArg1, "\n"))
+			output.WriteString(strings.Join(pushResult, "\n"))
+		}
+	case "eq":
+		{
+			loadArg1 := []string{
+				"@SP",
+				"AM=M-1",
+				"D=M\n",
+			}
+			loadArg2 := []string{
+				"@SP",
+				"AM=M-1",
+				"D=M-D\n",
+			}
+			checkEquality := []string{
+				fmt.Sprintf("@EQ%d", cw.eqCounter),
+				"D;JEQ",
+				"D=0",
+				fmt.Sprintf("@PUSHEQ%d", cw.eqCounter),
+				"0;JMP",
+				fmt.Sprintf("(EQ%d)", cw.eqCounter),
+				"D=-1\n",
+			}
+			pushResult := []string{
+				fmt.Sprintf("(PUSHEQ%d)", cw.eqCounter),
+				"@SP",
+				"A=M",
+				"M=D\n",
+			}
+
+			output.WriteString(strings.Join(loadArg1, "\n"))
+			output.WriteString(strings.Join(loadArg2, "\n"))
+			output.WriteString(strings.Join(checkEquality, "\n"))
+			output.WriteString(strings.Join(pushResult, "\n"))
+			cw.eqCounter += 1
+		}
+	case "gt":
+		{
+			loadArg1 := []string{
+				"@SP",
+				"AM=M-1",
+				"D=M\n",
+			}
+			loadArg2 := []string{
+				"@SP",
+				"AM=M-1",
+				"D=M-D\n",
+			}
+			checkEquality := []string{
+				fmt.Sprintf("@GT%d", cw.gtCounter),
+				"D;JGT",
+				"D=0",
+				fmt.Sprintf("@PUSHGT%d", cw.gtCounter),
+				"0;JMP",
+				fmt.Sprintf("(GT%d)", cw.gtCounter),
+				"D=-1\n",
+			}
+			pushResult := []string{
+				fmt.Sprintf("(PUSHGT%d)", cw.gtCounter),
+				"@SP",
+				"A=M",
+				"M=D\n",
+			}
+
+			output.WriteString(strings.Join(loadArg1, "\n"))
+			output.WriteString(strings.Join(loadArg2, "\n"))
+			output.WriteString(strings.Join(checkEquality, "\n"))
+			output.WriteString(strings.Join(pushResult, "\n"))
+			cw.gtCounter += 1
+		}
+	case "lt":
+		{
+			loadArg1 := []string{
+				"@SP",
+				"AM=M-1",
+				"D=M\n",
+			}
+			loadArg2 := []string{
+				"@SP",
+				"AM=M-1",
+				"D=M-D\n",
+			}
+			checkEquality := []string{
+				fmt.Sprintf("@LT%d", cw.ltCounter),
+				"D;JLT",
+				"D=0",
+				fmt.Sprintf("@PUSHLT%d", cw.ltCounter),
+				"0;JMP",
+				fmt.Sprintf("(LT%d)", cw.ltCounter),
+				"D=-1\n",
+			}
+			pushResult := []string{
+				fmt.Sprintf("(PUSHLT%d)", cw.ltCounter),
+				"@SP",
+				"A=M",
+				"M=D\n",
+			}
+
+			output.WriteString(strings.Join(loadArg1, "\n"))
+			output.WriteString(strings.Join(loadArg2, "\n"))
+			output.WriteString(strings.Join(checkEquality, "\n"))
+			output.WriteString(strings.Join(pushResult, "\n"))
+			cw.ltCounter += 1
+		}
+	case "and":
+		{
+			loadArg1 := []string{
+				"@SP",
+				"AM=M-1",
+				"D=M\n",
+			}
+			loadArg2 := []string{
+				"@SP",
+				"AM=M-1",
+				"D=D&M\n",
+			}
+			pushResult := []string{
+				"@SP",
+				"A=M",
+				"M=D\n",
+			}
+			output.WriteString(strings.Join(loadArg1, "\n"))
+			output.WriteString(strings.Join(loadArg2, "\n"))
+			output.WriteString(strings.Join(pushResult, "\n"))
+		}
+	case "or":
+		{
+			loadArg1 := []string{
+				"@SP",
+				"AM=M-1",
+				"D=M\n",
+			}
+			loadArg2 := []string{
+				"@SP",
+				"AM=M-1",
+				"D=D|M\n",
+			}
+			pushResult := []string{
+				"@SP",
+				"A=M",
+				"M=D\n",
+			}
+			output.WriteString(strings.Join(loadArg1, "\n"))
+			output.WriteString(strings.Join(loadArg2, "\n"))
+			output.WriteString(strings.Join(pushResult, "\n"))
+		}
+	case "not":
+		{
+			loadArg1 := []string{
+				"@SP",
+				"AM=M-1",
+				"D=!M\n",
+			}
+			pushResult := []string{
+				"@SP",
+				"A=M",
+				"M=D\n",
+			}
+			output.WriteString(strings.Join(loadArg1, "\n"))
+			output.WriteString(strings.Join(pushResult, "\n"))
+		}
+	}
+
+	n, err := cw.outputFile.WriteString(output.String())
+	if err != nil {
+		return err
+	}
+	if n < len(output.String()) {
+		return fmt.Errorf("underwrote string with call to WriteArithmetic with arg: %q", command)
+	}
+
+	if err := cw.writeIncrementSP(); err != nil {
+		return err
 	}
 	return nil
 }
