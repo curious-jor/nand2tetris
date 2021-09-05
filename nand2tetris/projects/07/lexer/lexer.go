@@ -39,7 +39,7 @@ type Lexer struct {
 }
 
 func NewLexer(f *os.File) *Lexer {
-	return &Lexer{r: bufio.NewReader(f)}
+	return &Lexer{r: bufio.NewReader(f), prev: NEWLINE}
 }
 
 const eofRune = rune(0)
