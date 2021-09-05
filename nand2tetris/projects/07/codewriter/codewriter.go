@@ -9,17 +9,13 @@ import (
 
 type CodeWriter struct {
 	outputFile *os.File
-	eqCounter  int
-	ltCounter  int
-	gtCounter  int
+	eqCounter  int // used to make unique label assembly commands for each vm equality command
 }
 
 func NewCodeWriter(outputFile *os.File) (*CodeWriter, error) {
 	var cw = new(CodeWriter)
 	cw.outputFile = outputFile
 	cw.eqCounter = 1
-	cw.gtCounter = 1
-	cw.ltCounter = 1
 	return cw, nil
 }
 
@@ -82,7 +78,6 @@ func (cw *CodeWriter) WriteArithmetic(command string) error {
 		}
 	case "neg":
 		{
-
 			loadArg1 := []string{
 				"@SP",
 				"AM=M-1",
@@ -97,8 +92,18 @@ func (cw *CodeWriter) WriteArithmetic(command string) error {
 			output.WriteString(strings.Join(loadArg1, "\n"))
 			output.WriteString(strings.Join(pushResult, "\n"))
 		}
-	case "eq":
+	case "eq", "gt", "lt": // all three equality checks use the same logic, but different jump mnemonics
 		{
+			var jumpMnemonic string
+			switch command {
+			case "eq":
+				jumpMnemonic = "JEQ"
+			case "gt":
+				jumpMnemonic = "JGT"
+			case "lt":
+				jumpMnemonic = "JLT"
+			}
+
 			loadArg1 := []string{
 				"@SP",
 				"AM=M-1",
@@ -111,7 +116,7 @@ func (cw *CodeWriter) WriteArithmetic(command string) error {
 			}
 			checkEquality := []string{
 				fmt.Sprintf("@EQ%d", cw.eqCounter),
-				"D;JEQ",
+				fmt.Sprintf("D;%s", jumpMnemonic),
 				"D=0",
 				fmt.Sprintf("@PUSHEQ%d", cw.eqCounter),
 				"0;JMP",
@@ -130,74 +135,6 @@ func (cw *CodeWriter) WriteArithmetic(command string) error {
 			output.WriteString(strings.Join(checkEquality, "\n"))
 			output.WriteString(strings.Join(pushResult, "\n"))
 			cw.eqCounter += 1
-		}
-	case "gt":
-		{
-			loadArg1 := []string{
-				"@SP",
-				"AM=M-1",
-				"D=M\n",
-			}
-			loadArg2 := []string{
-				"@SP",
-				"AM=M-1",
-				"D=M-D\n",
-			}
-			checkEquality := []string{
-				fmt.Sprintf("@GT%d", cw.gtCounter),
-				"D;JGT",
-				"D=0",
-				fmt.Sprintf("@PUSHGT%d", cw.gtCounter),
-				"0;JMP",
-				fmt.Sprintf("(GT%d)", cw.gtCounter),
-				"D=-1\n",
-			}
-			pushResult := []string{
-				fmt.Sprintf("(PUSHGT%d)", cw.gtCounter),
-				"@SP",
-				"A=M",
-				"M=D\n",
-			}
-
-			output.WriteString(strings.Join(loadArg1, "\n"))
-			output.WriteString(strings.Join(loadArg2, "\n"))
-			output.WriteString(strings.Join(checkEquality, "\n"))
-			output.WriteString(strings.Join(pushResult, "\n"))
-			cw.gtCounter += 1
-		}
-	case "lt":
-		{
-			loadArg1 := []string{
-				"@SP",
-				"AM=M-1",
-				"D=M\n",
-			}
-			loadArg2 := []string{
-				"@SP",
-				"AM=M-1",
-				"D=M-D\n",
-			}
-			checkEquality := []string{
-				fmt.Sprintf("@LT%d", cw.ltCounter),
-				"D;JLT",
-				"D=0",
-				fmt.Sprintf("@PUSHLT%d", cw.ltCounter),
-				"0;JMP",
-				fmt.Sprintf("(LT%d)", cw.ltCounter),
-				"D=-1\n",
-			}
-			pushResult := []string{
-				fmt.Sprintf("(PUSHLT%d)", cw.ltCounter),
-				"@SP",
-				"A=M",
-				"M=D\n",
-			}
-
-			output.WriteString(strings.Join(loadArg1, "\n"))
-			output.WriteString(strings.Join(loadArg2, "\n"))
-			output.WriteString(strings.Join(checkEquality, "\n"))
-			output.WriteString(strings.Join(pushResult, "\n"))
-			cw.ltCounter += 1
 		}
 	case "and":
 		{
