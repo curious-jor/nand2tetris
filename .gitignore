@@ -1,9 +1,6 @@
-*.cmp
-*.tst
 *.out
 demo
 *.*~
-*.hack
 *.asm
 *.hack
 *.exe
