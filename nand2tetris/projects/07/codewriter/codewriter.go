@@ -228,28 +228,173 @@ func (cw *CodeWriter) WritePushPop(command parser.CommandType, segment string, i
 		return fmt.Errorf("attempted to write %s as push or pop command. expected C_PUSH or C_POP", command.String())
 	}
 
+	var output strings.Builder
 	if command == parser.C_PUSH {
-		if segment == "constant" {
-			var output strings.Builder
-			loadConstant := []string{
-				fmt.Sprintf("@%d", index),
-				"D=A",
-				"@SP",
-				"A=M",
-				"M=D\n",
+		switch segment {
+		case "constant":
+			{
+				loadConstant := []string{
+					fmt.Sprintf("@%d", index),
+					"D=A",
+					"@SP",
+					"A=M",
+					"M=D\n",
+				}
+				output.WriteString(strings.Join(loadConstant, "\n"))
 			}
-			output.WriteString(strings.Join(loadConstant, "\n"))
-			n, err := cw.outputFile.WriteString(output.String())
-			if err != nil {
-				return err
-			}
-			if n < len(output.String()) {
-				return fmt.Errorf("underwrote string from call to WritePushPop with args: %s, %q, %d", command.String(), segment, index)
-			}
+		case "local", "argument", "this", "that":
+			{
+				var segmentName string
+				switch segment {
+				case "local":
+					segmentName = "LCL"
+				case "argument":
+					segmentName = "ARG"
+				case "this":
+					segmentName = "THIS"
+				case "that":
+					segmentName = "THAT"
+				}
 
-			if err := cw.writeIncrementSP(); err != nil {
-				return err
+				loadIndex := []string{
+					fmt.Sprintf("@%d", index),
+					"D=A\n",
+				}
+				loadIndexOfSegment := []string{
+					fmt.Sprintf("@%s", segmentName),
+					"A=D+M",
+					"D=M\n",
+				}
+				push := []string{
+					"@SP",
+					"A=M",
+					"M=D\n",
+				}
+
+				output.WriteString(strings.Join(loadIndex, "\n"))
+				output.WriteString(strings.Join(loadIndexOfSegment, "\n"))
+				output.WriteString(strings.Join(push, "\n"))
 			}
+		case "temp":
+			{
+				loadIndex := []string{
+					fmt.Sprintf("@%d", index),
+					"D=A\n",
+				}
+				loadIndexOfSegment := []string{
+					"@R5",
+					"A=D+A",
+					"D=M\n",
+				}
+				push := []string{
+					"@SP",
+					"A=M",
+					"M=D\n",
+				}
+				output.WriteString(strings.Join(loadIndex, "\n"))
+				output.WriteString(strings.Join(loadIndexOfSegment, "\n"))
+				output.WriteString(strings.Join(push, "\n"))
+			}
+		}
+
+		n, err := cw.outputFile.WriteString(output.String())
+		if err != nil {
+			return err
+		}
+		if n < len(output.String()) {
+			return fmt.Errorf("underwrote string from call to WritePushPop with args: %s, %q, %d", command.String(), segment, index)
+		}
+
+		if err := cw.writeIncrementSP(); err != nil {
+			return err
+		}
+	}
+
+	if command == parser.C_POP {
+		switch segment {
+		case "local", "argument", "this", "that":
+			{
+				var segmentName string
+				switch segment {
+				case "local":
+					segmentName = "LCL"
+				case "argument":
+					segmentName = "ARG"
+				case "this":
+					segmentName = "THIS"
+				case "that":
+					segmentName = "THAT"
+				}
+				loadIndex := []string{
+					fmt.Sprintf("@%d", index),
+					"D=A\n",
+				}
+				loadIndexOfSegment := []string{
+					fmt.Sprintf("@%s", segmentName),
+					"D=D+M\n",
+				}
+				storeAddress := []string{
+					"@R13",
+					"M=D\n",
+				}
+				popFromStack := []string{
+					"@SP",
+					"AM=M-1",
+					"D=M\n",
+				}
+				push := []string{
+					"@R13",
+					"A=M",
+					"M=D\n",
+				}
+
+				output.WriteString(strings.Join(loadIndex, "\n"))
+				output.WriteString(strings.Join(loadIndexOfSegment, "\n"))
+				output.WriteString(strings.Join(storeAddress, "\n"))
+				output.WriteString(strings.Join(popFromStack, "\n"))
+				output.WriteString(strings.Join(push, "\n"))
+			}
+		case "temp":
+			{
+				loadIndex := []string{
+					fmt.Sprintf("@%d", index),
+					"D=A\n",
+				}
+				loadIndexOfSegment := []string{
+					"@R5",
+					"D=D+A\n",
+				}
+				storeAddress := []string{
+					"@R13",
+					"M=D\n",
+				}
+				popFromStack := []string{
+					"@SP",
+					"AM=M-1",
+					"D=M\n",
+				}
+				push := []string{
+					"@R13",
+					"A=M",
+					"M=D\n",
+				}
+
+				output.WriteString(strings.Join(loadIndex, "\n"))
+				output.WriteString(strings.Join(loadIndexOfSegment, "\n"))
+				output.WriteString(strings.Join(storeAddress, "\n"))
+				output.WriteString(strings.Join(popFromStack, "\n"))
+				output.WriteString(strings.Join(push, "\n"))
+			}
+		case "constant":
+			return fmt.Errorf("attempted to write pop command with %q as segment and %d as index", segment, index)
+		}
+
+		n, err := cw.outputFile.WriteString(output.String())
+		if err != nil {
+			return err
+		}
+		if n < len(output.String()) {
+			return fmt.Errorf("underwrote string from call to WritePushPop with args: %s, %q, %d", command.String(), segment, index)
 		}
 	}
 

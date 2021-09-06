@@ -48,7 +48,7 @@ func translate(path string) error {
 			codeWriter.WriteArithmetic(p.Arg1())
 		}
 
-		if p.CommandType() == parser.C_PUSH {
+		if ct := p.CommandType(); ct == parser.C_PUSH || ct == parser.C_POP {
 			codeWriter.WritePushPop(p.CommandType(), p.Arg1(), p.Arg2())
 		}
 	}
