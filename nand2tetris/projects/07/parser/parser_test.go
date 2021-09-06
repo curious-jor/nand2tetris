@@ -104,6 +104,7 @@ func TestCommandType(t *testing.T) {
 		{"or", &Command{ct: C_ARITHMETIC, arg1: "add"}, C_ARITHMETIC},
 		{"not", &Command{ct: C_ARITHMETIC, arg1: "add"}, C_ARITHMETIC},
 		{"push", &Command{ct: C_PUSH, arg1: "constant", arg2: 7}, C_PUSH},
+		{"pop", &Command{ct: C_POP, arg1: "local", arg2: 1}, C_POP},
 		{"empty", nil, emptyCommandType},
 	}
 
@@ -137,6 +138,7 @@ func TestArg1(t *testing.T) {
 		{"C_ARITHMETIC or", &Command{ct: C_ARITHMETIC, arg1: "add"}, "add"},
 		{"C_ARITHMETIC not", &Command{ct: C_ARITHMETIC, arg1: "add"}, "add"},
 		{"C_PUSH push constant 7", &Command{ct: C_PUSH, arg1: "constant", arg2: 7}, "constant"},
+		{"C_POP pop local 1", &Command{ct: C_POP, arg1: "local", arg2: 1}, "local"},
 		{"C_RETURN arg1", &Command{ct: C_RETURN, arg1: "return"}, ""},
 	}
 
@@ -170,6 +172,7 @@ func TestArg2(t *testing.T) {
 		{"C_ARITHMETIC or", &Command{ct: C_ARITHMETIC, arg1: "add"}, emptyArg2},
 		{"C_ARITHMETIC not", &Command{ct: C_ARITHMETIC, arg1: "add"}, emptyArg2},
 		{"C_PUSH push constant 7", &Command{ct: C_PUSH, arg1: "constant", arg2: 7}, 7},
+		{"C_PUSH pop local 1", &Command{ct: C_POP, arg1: "local", arg2: 1}, 1},
 	}
 
 	for _, test := range tests {

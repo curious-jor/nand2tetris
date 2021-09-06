@@ -91,11 +91,19 @@ func (p *Parser) parseArithmeticCommand() (*Command, error) {
 	return &Command{ct: C_ARITHMETIC, arg1: p.lexeme.Value, arg2: emptyArg2}, nil
 }
 
-func (p *Parser) parsePushCommand() (*Command, error) {
+func (p *Parser) parsePushPopCommand() (*Command, error) {
+	var currCmdType CommandType
+	if p.lexeme.Value == "push" {
+		currCmdType = C_PUSH
+	}
+	if p.lexeme.Value == "pop" {
+		currCmdType = C_POP
+	}
+
 	segment := p.lxr.NextToken() // consume segment
 	if segment.Token != lexer.ARG {
 		return &Command{
-				ct: C_PUSH, arg1: segment.Value,
+				ct: currCmdType, arg1: segment.Value,
 				arg2: emptyArg2,
 			}, &ParserCouldNotParseError{
 				lxm: segment,
@@ -111,7 +119,7 @@ func (p *Parser) parsePushCommand() (*Command, error) {
 	indexInt, err := strconv.Atoi(index.Value)
 	if err != nil {
 		return &Command{
-				ct:   C_PUSH,
+				ct:   currCmdType,
 				arg1: segment.Value,
 				arg2: emptyArg2,
 			}, &ParserCouldNotParseError{
@@ -120,7 +128,7 @@ func (p *Parser) parsePushCommand() (*Command, error) {
 			}
 	}
 
-	return &Command{ct: C_PUSH, arg1: segment.Value, arg2: indexInt}, nil
+	return &Command{ct: currCmdType, arg1: segment.Value, arg2: indexInt}, nil
 }
 
 var ErrParserNoMoreCommands = errors.New("parser has no more commands")
@@ -148,8 +156,8 @@ func (p *Parser) Advance() error {
 				parsedCmd, err = p.parseArithmeticCommand()
 			}
 
-			if p.lexeme.Value == "push" {
-				parsedCmd, err = p.parsePushCommand()
+			if p.lexeme.Value == "push" || p.lexeme.Value == "pop" {
+				parsedCmd, err = p.parsePushPopCommand()
 			}
 		}
 	}
