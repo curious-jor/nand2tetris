@@ -19,215 +19,82 @@ func TestMain(m *testing.M) {
 	os.Exit(m.Run())
 }
 
-// Stack Arithmetic tests from book
-func TestStackArithmeticSimpleAdd(t *testing.T) {
-	inputPath := "StackArithmetic/SimpleAdd/SimpleAdd.vm"
-	testScript := strings.Split(inputPath, ".")[0] + ".tst"
+func TestStackArithmetic(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name  string
+		input string
+	}{
+		// Stack Arithmetic tests from book
+		{"SimpleAdd", "StackArithmetic/SimpleAdd/SimpleAdd.vm"},
+		{"StackTest", "StackArithmetic/StackTest/StackTest.vm"},
 
-	err := translate(inputPath)
-	if err != nil {
-		panic(err)
+		// Personal tests
+		{"SimpleSub", "StackArithmetic/SimpleSub/SimpleSub.vm"},
+		{"SimpleNeg", "StackArithmetic/SimpleNeg/SimpleNeg.vm"},
+		{"SimpleEq", "StackArithmetic/SimpleEq/SimpleEq.vm"},
+		{"SimpleGt", "StackArithmetic/SimpleGt/SimpleGt.vm"},
+		{"SimpleLt", "StackArithmetic/SimpleLt/SimpleLt.vm"},
+		{"SimpleAnd", "StackArithmetic/SimpleAnd/SimpleAnd.vm"},
+		{"SimpleOr", "StackArithmetic/SimpleOr/SimpleOr.vm"},
+		{"SimpleNot", "StackArithmetic/SimpleNot/SimpleNot.vm"},
 	}
 
-	runCPUEmulator := exec.Command("cmd", "/C", `..\..\tools\CPUEmulator.bat`, testScript)
-	output, err := runCPUEmulator.CombinedOutput()
-	if err != nil {
-		panic(err)
-	}
+	for _, test := range tests {
+		test := test
+		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
+			testScript := strings.Split(test.input, ".")[0] + ".tst"
+			err := translate(test.input)
+			if err != nil {
+				t.Fatal(err)
+			}
 
-	successMsg := "End of script - Comparison ended successfully"
-	if strings.TrimSpace(string(output)) != successMsg {
-		t.Errorf("%s", output)
-	}
-}
+			runCPUEmulator := exec.Command("cmd", "/C", `..\..\tools\CPUEmulator.bat`, testScript)
+			output, err := runCPUEmulator.CombinedOutput()
+			if err != nil {
+				t.Fatal(err)
+			}
 
-func TestStackArithmeticStackTest(t *testing.T) {
-	inputPath := "StackArithmetic/StackTest/StackTest.vm"
-	testScript := strings.Split(inputPath, ".")[0] + ".tst"
-
-	err := translate(inputPath)
-	if err != nil {
-		panic(err)
-	}
-
-	runCPUEmulator := exec.Command("cmd", "/C", `..\..\tools\CPUEmulator.bat`, testScript)
-	output, err := runCPUEmulator.CombinedOutput()
-	if err != nil {
-		panic(err)
-	}
-
-	successMsg := "End of script - Comparison ended successfully"
-	if strings.TrimSpace(string(output)) != successMsg {
-		t.Errorf("%s", output)
-	}
-}
-
-// Personal stack arithmetic tests
-func TestSimpleSub(t *testing.T) {
-	inputPath := "StackArithmetic/SimpleSub/SimpleSub.vm"
-	testScript := strings.Split(inputPath, ".")[0] + ".tst"
-
-	err := translate(inputPath)
-	if err != nil {
-		panic(err)
-	}
-
-	runCPUEmulator := exec.Command("cmd", "/C", `..\..\tools\CPUEmulator.bat`, testScript)
-	output, err := runCPUEmulator.CombinedOutput()
-	if err != nil {
-		panic(err)
-	}
-
-	successMsg := "End of script - Comparison ended successfully"
-	if strings.TrimSpace(string(output)) != successMsg {
-		t.Errorf("%s", output)
-	}
-}
-
-func TestSimpleNeg(t *testing.T) {
-	inputPath := "StackArithmetic/SimpleNeg/SimpleNeg.vm"
-	testScript := strings.Split(inputPath, ".")[0] + ".tst"
-
-	err := translate(inputPath)
-	if err != nil {
-		panic(err)
-	}
-
-	runCPUEmulator := exec.Command("cmd", "/C", `..\..\tools\CPUEmulator.bat`, testScript)
-	output, err := runCPUEmulator.CombinedOutput()
-	if err != nil {
-		panic(err)
-	}
-
-	successMsg := "End of script - Comparison ended successfully"
-	if strings.TrimSpace(string(output)) != successMsg {
-		t.Errorf("%s", output)
-	}
-}
-
-func TestSimpleEq(t *testing.T) {
-	inputPath := "StackArithmetic/SimpleEq/SimpleEq.vm"
-	testScript := strings.Split(inputPath, ".")[0] + ".tst"
-
-	err := translate(inputPath)
-	if err != nil {
-		panic(err)
-	}
-
-	runCPUEmulator := exec.Command("cmd", "/C", `..\..\tools\CPUEmulator.bat`, testScript)
-	output, err := runCPUEmulator.CombinedOutput()
-	if err != nil {
-		panic(err)
-	}
-
-	successMsg := "End of script - Comparison ended successfully"
-	if strings.TrimSpace(string(output)) != successMsg {
-		t.Errorf("%s", output)
-	}
-}
-
-func TestSimpleLt(t *testing.T) {
-	inputPath := "StackArithmetic/SimpleLt/SimpleLt.vm"
-	testScript := strings.Split(inputPath, ".")[0] + ".tst"
-
-	err := translate(inputPath)
-	if err != nil {
-		panic(err)
-	}
-
-	runCPUEmulator := exec.Command("cmd", "/C", `..\..\tools\CPUEmulator.bat`, testScript)
-	output, err := runCPUEmulator.CombinedOutput()
-	if err != nil {
-		panic(err)
-	}
-
-	successMsg := "End of script - Comparison ended successfully"
-	if strings.TrimSpace(string(output)) != successMsg {
-		t.Errorf("%s", output)
-	}
-}
-
-func TestSimpleAnd(t *testing.T) {
-	inputPath := "StackArithmetic/SimpleAnd/SimpleAnd.vm"
-	testScript := strings.Split(inputPath, ".")[0] + ".tst"
-
-	err := translate(inputPath)
-	if err != nil {
-		panic(err)
-	}
-
-	runCPUEmulator := exec.Command("cmd", "/C", `..\..\tools\CPUEmulator.bat`, testScript)
-	output, err := runCPUEmulator.CombinedOutput()
-	if err != nil {
-		panic(err)
-	}
-
-	successMsg := "End of script - Comparison ended successfully"
-	if strings.TrimSpace(string(output)) != successMsg {
-		t.Errorf("%s", output)
-	}
-}
-
-func TestSimpleOr(t *testing.T) {
-	inputPath := "StackArithmetic/SimpleOr/SimpleOr.vm"
-	testScript := strings.Split(inputPath, ".")[0] + ".tst"
-
-	err := translate(inputPath)
-	if err != nil {
-		panic(err)
-	}
-
-	runCPUEmulator := exec.Command("cmd", "/C", `..\..\tools\CPUEmulator.bat`, testScript)
-	output, err := runCPUEmulator.CombinedOutput()
-	if err != nil {
-		panic(err)
-	}
-
-	successMsg := "End of script - Comparison ended successfully"
-	if strings.TrimSpace(string(output)) != successMsg {
-		t.Errorf("%s", output)
-	}
-}
-
-func TestSimpleNot(t *testing.T) {
-	inputPath := "StackArithmetic/SimpleNot/SimpleNot.vm"
-	testScript := strings.Split(inputPath, ".")[0] + ".tst"
-
-	err := translate(inputPath)
-	if err != nil {
-		panic(err)
-	}
-
-	runCPUEmulator := exec.Command("cmd", "/C", `..\..\tools\CPUEmulator.bat`, testScript)
-	output, err := runCPUEmulator.CombinedOutput()
-	if err != nil {
-		panic(err)
-	}
-
-	successMsg := "End of script - Comparison ended successfully"
-	if strings.TrimSpace(string(output)) != successMsg {
-		t.Errorf("%s", output)
+			successMsg := "End of script - Comparison ended successfully"
+			if strings.TrimSpace(string(output)) != successMsg {
+				t.Errorf("%s", output)
+			}
+		})
 	}
 }
 
 // Memory access tests from book
 func TestMemoryAccessBasicTest(t *testing.T) {
-	inputPath := "MemoryAccess/BasicTest/BasicTest.vm"
-	testScript := strings.Split(inputPath, ".")[0] + ".tst"
-
-	err := translate(inputPath)
-	if err != nil {
-		panic(err)
+	t.Parallel()
+	tests := []struct {
+		name  string
+		input string
+	}{
+		// Memory Access tests from book
+		{"BasicTest", "MemoryAccess/BasicTest/BasicTest.vm"},
 	}
 
-	runCPUEmulator := exec.Command("cmd", "/C", `..\..\tools\CPUEmulator.bat`, testScript)
-	output, err := runCPUEmulator.CombinedOutput()
-	if err != nil {
-		panic(err)
-	}
+	for _, test := range tests {
+		test := test
+		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
+			testScript := strings.Split(test.input, ".")[0] + ".tst"
+			err := translate(test.input)
+			if err != nil {
+				t.Fatal(err)
+			}
 
-	successMsg := "End of script - Comparison ended successfully"
-	if strings.TrimSpace(string(output)) != successMsg {
-		t.Errorf("%s", output)
+			runCPUEmulator := exec.Command("cmd", "/C", `..\..\tools\CPUEmulator.bat`, testScript)
+			output, err := runCPUEmulator.CombinedOutput()
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			successMsg := "End of script - Comparison ended successfully"
+			if strings.TrimSpace(string(output)) != successMsg {
+				t.Errorf("%s", output)
+			}
+		})
 	}
 }
