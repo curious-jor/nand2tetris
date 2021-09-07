@@ -20,7 +20,7 @@ func TestMain(m *testing.M) {
 }
 
 // Stack Arithmetic tests from book
-func TestSimpleAdd(t *testing.T) {
+func TestStackArithmeticSimpleAdd(t *testing.T) {
 	inputPath := "StackArithmetic/SimpleAdd/SimpleAdd.vm"
 	testScript := strings.Split(inputPath, ".")[0] + ".tst"
 
@@ -41,7 +41,7 @@ func TestSimpleAdd(t *testing.T) {
 	}
 }
 
-func TestStackTest(t *testing.T) {
+func TestStackArithmeticStackTest(t *testing.T) {
 	inputPath := "StackArithmetic/StackTest/StackTest.vm"
 	testScript := strings.Split(inputPath, ".")[0] + ".tst"
 
@@ -191,6 +191,28 @@ func TestSimpleOr(t *testing.T) {
 
 func TestSimpleNot(t *testing.T) {
 	inputPath := "StackArithmetic/SimpleNot/SimpleNot.vm"
+	testScript := strings.Split(inputPath, ".")[0] + ".tst"
+
+	err := translate(inputPath)
+	if err != nil {
+		panic(err)
+	}
+
+	runCPUEmulator := exec.Command("cmd", "/C", `..\..\tools\CPUEmulator.bat`, testScript)
+	output, err := runCPUEmulator.CombinedOutput()
+	if err != nil {
+		panic(err)
+	}
+
+	successMsg := "End of script - Comparison ended successfully"
+	if strings.TrimSpace(string(output)) != successMsg {
+		t.Errorf("%s", output)
+	}
+}
+
+// Memory access tests from book
+func TestMemoryAccessBasicTest(t *testing.T) {
+	inputPath := "MemoryAccess/BasicTest/BasicTest.vm"
 	testScript := strings.Split(inputPath, ".")[0] + ".tst"
 
 	err := translate(inputPath)
