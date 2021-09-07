@@ -12,11 +12,11 @@ type CodeWriter struct {
 	eqCounter  int // used to make unique label assembly commands for each vm equality command
 }
 
-func NewCodeWriter(outputFile *os.File) (*CodeWriter, error) {
+func NewCodeWriter(outputFile *os.File) *CodeWriter {
 	var cw = new(CodeWriter)
 	cw.outputFile = outputFile
 	cw.eqCounter = 1
-	return cw, nil
+	return cw
 }
 
 func (cw *CodeWriter) SetFileName(fileName string) error {

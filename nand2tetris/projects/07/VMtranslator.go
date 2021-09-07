@@ -36,10 +36,7 @@ func translate(path string) error {
 		panic(err)
 	}
 
-	codeWriter, err := codewriter.NewCodeWriter(outputFile)
-	if err != nil {
-		return err
-	}
+	codeWriter := codewriter.NewCodeWriter(outputFile)
 
 	for p.HasMoreCommands() {
 		p.Advance()
