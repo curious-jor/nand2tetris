@@ -29,6 +29,7 @@ func (cw *CodeWriter) SetFileName(fileName string) error {
 
 func (cw *CodeWriter) WriteArithmetic(command string) error {
 	var output strings.Builder
+	commandUnsupported := false
 
 	switch command {
 	case "add":
@@ -193,14 +194,18 @@ func (cw *CodeWriter) WriteArithmetic(command string) error {
 			output.WriteString(strings.Join(loadArg1, "\n"))
 			output.WriteString(strings.Join(pushResult, "\n"))
 		}
+	default:
+		{
+			output.WriteString(fmt.Sprintf("unsupported command: %q\n", command))
+			commandUnsupported = true
+		}
 	}
 
-	n, err := cw.outputFile.WriteString(output.String())
-	if err != nil {
+	if _, err := cw.outputFile.WriteString(output.String()); err != nil {
 		return err
 	}
-	if n < len(output.String()) {
-		return fmt.Errorf("underwrote string with call to WriteArithmetic with arg: %q", command)
+	if commandUnsupported {
+		return fmt.Errorf("attempted to write unsupported arithmetic command: %q", command)
 	}
 
 	if err := cw.writeIncrementSP(); err != nil {
