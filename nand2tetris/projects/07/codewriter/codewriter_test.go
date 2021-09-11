@@ -1,29 +1,62 @@
 package codewriter
 
 import (
+	"bytes"
 	"os"
 	"testing"
 )
 
 func TestWriteArithmetic(t *testing.T) {
-	tempDir := t.TempDir()
-	tempFile, err := os.CreateTemp(tempDir, "*.vm")
-	if err != nil {
-		t.Fatal(err)
+	t.Parallel()
+	tests := []struct {
+		name     string
+		input    string
+		expected string
+	}{
+		{"add", "add", "D+M"},
+		{"sub", "sub", "M-D"},
+		{"neg", "neg", "-M"},
+		{"eq", "eq", "D;JEQ"},
+		{"gt", "gt", "D;JGT"},
+		{"lt", "lt", "D;JLT"},
+		{"and", "and", "D&M"},
+		{"or", "or", "D|M"},
+		{"not", "not", "!M"},
 	}
-	defer os.RemoveAll(tempDir)
 
-	cw := NewCodeWriter(tempFile)
-	emptyCmdString := ""
+	for _, test := range tests {
+		test := test
+		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
 
-	if err := cw.WriteArithmetic(emptyCmdString); err == nil {
-		t.Errorf("codewriter.WriteArithmetic should return an error when called with empty string")
-	}
+			tempDir := t.TempDir()
+			tempFile, err := os.CreateTemp(tempDir, "*.asm")
+			if err != nil {
+				t.Fatal(err)
+			}
+			defer os.RemoveAll(tempDir)
 
-	if err := tempFile.Close(); err != nil {
-		t.Fatal(err)
-	}
-	if err := os.Remove(tempFile.Name()); err != nil {
-		t.Fatal(err)
+			cw := NewCodeWriter(tempFile)
+
+			if err := cw.WriteArithmetic(test.input); err != nil {
+				t.Fatal(err)
+			}
+
+			output, err := os.ReadFile(tempFile.Name())
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			if !bytes.Contains(output, []byte(test.expected)) {
+				t.Errorf("expected output file to contain %q with input %q", test.expected, test.input)
+			}
+
+			if err := tempFile.Close(); err != nil {
+				t.Fatal(err)
+			}
+			if err := os.Remove(tempFile.Name()); err != nil {
+				t.Fatal(err)
+			}
+		})
 	}
 }
