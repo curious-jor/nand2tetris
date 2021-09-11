@@ -24,8 +24,8 @@ func TestWriteArithmetic(t *testing.T) {
 		{"and", "and", "D&M"},
 		{"or", "or", "D|M"},
 		{"not", "not", "!M"},
-		{"empty", "", unsupportedCmdString},
-		{"invalid nand", "nand", unsupportedCmdString},
+		{"error empty", "", unsupportedCmdString},
+		{"error nand", "nand", unsupportedCmdString},
 	}
 
 	for _, test := range tests {
@@ -42,12 +42,12 @@ func TestWriteArithmetic(t *testing.T) {
 
 			cw := NewCodeWriter(tempFile)
 
-			if strings.HasPrefix(test.name, "invalid") || test.name == "empty" {
-				if err := cw.WriteArithmetic(test.input); err == nil {
-					t.Fatalf("expected error for WriteArithmetic called with %q", test.input)
+			if !strings.HasPrefix(test.name, "error") {
+				if err := cw.WriteArithmetic(test.input); err != nil {
+					t.Fatal(err)
 				}
-			} else if err := cw.WriteArithmetic(test.input); err != nil {
-				t.Fatal(err)
+			} else if err := cw.WriteArithmetic(test.input); err == nil {
+				t.Fatalf("expected error from call to WriteArithmetic with input %s", test.input)
 			}
 
 			output, err := os.ReadFile(tempFile.Name())
@@ -93,6 +93,7 @@ func TestWritePushPop(t *testing.T) {
 		{"pop this 6", pushPopInput{parser.C_POP, "this", 6}, []string{"@THIS", "@6"}},
 		{"pop that 5", pushPopInput{parser.C_POP, "that", 5}, []string{"@THAT", "@5"}},
 		{"pop temp 6", pushPopInput{parser.C_POP, "temp", 6}, []string{"@R5", "@6"}},
+		{"error pop constant 6", pushPopInput{parser.C_POP, "constant", 6}, []string{}},
 	}
 
 	for _, test := range tests {
@@ -108,8 +109,13 @@ func TestWritePushPop(t *testing.T) {
 			defer os.RemoveAll(tempDir)
 
 			cw := NewCodeWriter(tempFile)
-			if err := cw.WritePushPop(test.input.command, test.input.segment, test.input.index); err != nil {
-				t.Fatal(err)
+
+			if !strings.HasPrefix(test.name, "error") {
+				if err := cw.WritePushPop(test.input.command, test.input.segment, test.input.index); err != nil {
+					t.Fatal(err)
+				}
+			} else if err := cw.WritePushPop(test.input.command, test.input.segment, test.input.index); err == nil {
+				t.Fatalf("expected error from call to WritePushPop with input %v", test.input)
 			}
 
 			output, err := os.ReadFile(tempFile.Name())
