@@ -27,6 +27,8 @@ func (cw *CodeWriter) SetFileName(fileName string) error {
 	return nil
 }
 
+var unsupportedCmdString = "Unsupported Command: "
+
 func (cw *CodeWriter) WriteArithmetic(command string) error {
 	var output strings.Builder
 	commandUnsupported := false
@@ -196,7 +198,7 @@ func (cw *CodeWriter) WriteArithmetic(command string) error {
 		}
 	default:
 		{
-			output.WriteString(fmt.Sprintf("unsupported command: %q\n", command))
+			output.WriteString(unsupportedCmdString + command + "\n")
 			commandUnsupported = true
 		}
 	}

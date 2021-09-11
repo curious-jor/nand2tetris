@@ -3,6 +3,7 @@ package codewriter
 import (
 	"bytes"
 	"os"
+	"strings"
 	"testing"
 )
 
@@ -22,6 +23,8 @@ func TestWriteArithmetic(t *testing.T) {
 		{"and", "and", "D&M"},
 		{"or", "or", "D|M"},
 		{"not", "not", "!M"},
+		{"empty", "", unsupportedCmdString},
+		{"invalid nand", "nand", unsupportedCmdString},
 	}
 
 	for _, test := range tests {
@@ -38,7 +41,11 @@ func TestWriteArithmetic(t *testing.T) {
 
 			cw := NewCodeWriter(tempFile)
 
-			if err := cw.WriteArithmetic(test.input); err != nil {
+			if strings.HasPrefix(test.name, "invalid") || test.name == "empty" {
+				if err := cw.WriteArithmetic(test.input); err == nil {
+					t.Fatalf("expected error for WriteArithmetic called with %q", test.input)
+				}
+			} else if err := cw.WriteArithmetic(test.input); err != nil {
 				t.Fatal(err)
 			}
 
