@@ -4,27 +4,30 @@ import (
 	"VMtranslator/parser"
 	"fmt"
 	"os"
+	"path/filepath"
 	"strings"
 )
 
 type CodeWriter struct {
 	outputFile *os.File
-	eqCounter  int // used to make unique label assembly commands for each vm equality command
+	eqCounter  int    // used to make unique label assembly commands for each vm equality command
+	fileName   string // name of the file currently being translated
+	label      string
 }
 
 func NewCodeWriter(outputFile *os.File) *CodeWriter {
 	var cw = new(CodeWriter)
 	cw.outputFile = outputFile
 	cw.eqCounter = 1
+	cw.fileName = outputFile.Name()
+
+	_, f := filepath.Split(cw.fileName)
+	cw.label = strings.Split(f, ".")[0]
 	return cw
 }
 
-func (cw *CodeWriter) SetFileName(fileName string) error {
-	if err := os.Rename(cw.outputFile.Name(), fileName); err != nil {
-		return err
-	}
-
-	return nil
+func (cw *CodeWriter) SetFileName(fileName string) {
+	cw.fileName = fileName
 }
 
 var unsupportedCmdString = "Unsupported Command: "
@@ -324,6 +327,21 @@ func (cw *CodeWriter) WritePushPop(command parser.CommandType, segment string, i
 				output.WriteString(strings.Join(loadAddress, "\n"))
 				output.WriteString(strings.Join(push, "\n"))
 			}
+		case "static":
+			{
+				symbolCmd := fmt.Sprintf("@%s.%d", cw.label, index)
+				loadStatic := []string{
+					symbolCmd,
+					"D=M\n",
+				}
+				push := []string{
+					"@SP",
+					"A=M",
+					"M=D\n",
+				}
+				output.WriteString(strings.Join(loadStatic, "\n"))
+				output.WriteString(strings.Join(push, "\n"))
+			}
 		}
 
 		n, err := cw.outputFile.WriteString(output.String())
@@ -433,6 +451,22 @@ func (cw *CodeWriter) WritePushPop(command parser.CommandType, segment string, i
 					fmt.Sprintf("@%s", entry),
 					"M=D\n",
 				}
+				output.WriteString(strings.Join(popFromStack, "\n"))
+				output.WriteString(strings.Join(push, "\n"))
+			}
+		case "static":
+			{
+				popFromStack := []string{
+					"@SP",
+					"AM=M-1",
+					"D=M\n",
+				}
+				symbolCmd := fmt.Sprintf("@%s.%d", cw.label, index)
+				push := []string{
+					symbolCmd,
+					"M=D\n",
+				}
+
 				output.WriteString(strings.Join(popFromStack, "\n"))
 				output.WriteString(strings.Join(push, "\n"))
 			}

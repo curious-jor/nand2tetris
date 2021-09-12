@@ -3,7 +3,9 @@ package codewriter
 import (
 	"VMtranslator/parser"
 	"bytes"
+	"fmt"
 	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 )
@@ -131,6 +133,57 @@ func TestWritePushPop(t *testing.T) {
 				if !bytes.Contains(output, []byte(expectedStr)) {
 					t.Errorf("expected output file to contain %q with input %v", expectedStr, test.input)
 				}
+			}
+
+			if err := cw.Close(); err != nil {
+				t.Fatal(err)
+			}
+
+			if err := os.Remove(tempFile.Name()); err != nil {
+				t.Fatal(err)
+			}
+		})
+	}
+}
+
+func TestWritePushPopStatic(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name     string
+		input    pushPopInput
+		expected string
+	}{
+		{"push static 3", pushPopInput{parser.C_PUSH, "static", 3}, "@3"},
+		{"pop static 8", pushPopInput{parser.C_POP, "static", 8}, "@8"},
+	}
+
+	for _, test := range tests {
+		test := test
+		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
+
+			tempDir := t.TempDir()
+			tempFile, err := os.CreateTemp(tempDir, "*.asm")
+			if err != nil {
+				t.Fatal(err)
+			}
+			defer os.RemoveAll(tempDir)
+
+			cw := NewCodeWriter(tempFile)
+
+			if err := cw.WritePushPop(test.input.command, test.input.segment, test.input.index); err != nil {
+				t.Fatal(err)
+			}
+
+			output, err := os.ReadFile(tempFile.Name())
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			staticVarLabel := fmt.Sprintf("@%s.%d", strings.Split(filepath.Base(tempFile.Name()), ".")[0], test.input.index)
+			if !bytes.Contains(output, []byte(staticVarLabel)) {
+				t.Errorf("expected output file to contain label command %q with input %v", staticVarLabel, test.input)
+				t.Log(string(output))
 			}
 
 			if err := cw.Close(); err != nil {
