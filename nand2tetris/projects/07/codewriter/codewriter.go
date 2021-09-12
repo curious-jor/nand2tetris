@@ -302,6 +302,28 @@ func (cw *CodeWriter) WritePushPop(command parser.CommandType, segment string, i
 				output.WriteString(strings.Join(loadIndexOfSegment, "\n"))
 				output.WriteString(strings.Join(push, "\n"))
 			}
+		case "pointer":
+			{
+				var entry string
+				if index == 0 {
+					entry = "THIS"
+				}
+				if index == 1 {
+					entry = "THAT"
+				}
+
+				loadAddress := []string{
+					fmt.Sprintf("@%s", entry),
+					"D=M\n",
+				}
+				push := []string{
+					"@SP",
+					"A=M",
+					"M=D\n",
+				}
+				output.WriteString(strings.Join(loadAddress, "\n"))
+				output.WriteString(strings.Join(push, "\n"))
+			}
 		}
 
 		n, err := cw.outputFile.WriteString(output.String())
@@ -389,6 +411,28 @@ func (cw *CodeWriter) WritePushPop(command parser.CommandType, segment string, i
 				output.WriteString(strings.Join(loadIndex, "\n"))
 				output.WriteString(strings.Join(loadIndexOfSegment, "\n"))
 				output.WriteString(strings.Join(storeAddress, "\n"))
+				output.WriteString(strings.Join(popFromStack, "\n"))
+				output.WriteString(strings.Join(push, "\n"))
+			}
+		case "pointer":
+			{
+				var entry string
+				if index == 0 {
+					entry = "THIS"
+				}
+				if index == 1 {
+					entry = "THAT"
+				}
+
+				popFromStack := []string{
+					"@SP",
+					"AM=M-1",
+					"D=M\n",
+				}
+				push := []string{
+					fmt.Sprintf("@%s", entry),
+					"M=D\n",
+				}
 				output.WriteString(strings.Join(popFromStack, "\n"))
 				output.WriteString(strings.Join(push, "\n"))
 			}

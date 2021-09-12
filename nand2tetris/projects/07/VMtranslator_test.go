@@ -73,6 +73,7 @@ func TestMemoryAccessBasicTest(t *testing.T) {
 	}{
 		// Memory Access tests from book
 		{"BasicTest", "MemoryAccess/BasicTest/BasicTest.vm"},
+		{"PointerTest", "MemoryAccess/PointerTest/PointerTest.vm"},
 	}
 
 	for _, test := range tests {

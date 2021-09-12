@@ -93,6 +93,10 @@ func TestWritePushPop(t *testing.T) {
 		{"pop this 6", pushPopInput{parser.C_POP, "this", 6}, []string{"@THIS", "@6"}},
 		{"pop that 5", pushPopInput{parser.C_POP, "that", 5}, []string{"@THAT", "@5"}},
 		{"pop temp 6", pushPopInput{parser.C_POP, "temp", 6}, []string{"@R5", "@6"}},
+		{"push pointer 0", pushPopInput{parser.C_PUSH, "pointer", 0}, []string{"@THIS"}},
+		{"push pointer 1", pushPopInput{parser.C_PUSH, "pointer", 1}, []string{"@THAT"}},
+		{"pop pointer 0", pushPopInput{parser.C_POP, "pointer", 0}, []string{"@THIS"}},
+		{"pop pointer 1", pushPopInput{parser.C_POP, "pointer", 1}, []string{"@THAT"}},
 		{"error pop constant 6", pushPopInput{parser.C_POP, "constant", 6}, []string{}},
 	}
 
@@ -129,9 +133,10 @@ func TestWritePushPop(t *testing.T) {
 				}
 			}
 
-			if err := tempFile.Close(); err != nil {
+			if err := cw.Close(); err != nil {
 				t.Fatal(err)
 			}
+
 			if err := os.Remove(tempFile.Name()); err != nil {
 				t.Fatal(err)
 			}
