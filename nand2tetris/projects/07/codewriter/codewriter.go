@@ -8,6 +8,8 @@ import (
 	"strings"
 )
 
+const newLineString = "\n"
+
 type CodeWriter struct {
 	outputFile *os.File
 	eqCounter  int    // used to make unique label assembly commands for each vm equality command
@@ -30,7 +32,9 @@ func (cw *CodeWriter) SetFileName(fileName string) {
 	cw.fileName = fileName
 }
 
-var unsupportedCmdString = "Unsupported Command: "
+const unsupportedCmdString = "Unsupported Command: "
+
+var incrementSPString = fmt.Sprint("@SP", newLineString, "M=M+1", newLineString)
 
 func (cw *CodeWriter) WriteArithmetic(command string) error {
 	var output strings.Builder
@@ -205,29 +209,12 @@ func (cw *CodeWriter) WriteArithmetic(command string) error {
 			commandUnsupported = true
 		}
 	}
-
+	output.WriteString(incrementSPString)
 	if _, err := cw.outputFile.WriteString(output.String()); err != nil {
 		return err
 	}
 	if commandUnsupported {
 		return fmt.Errorf("attempted to write unsupported arithmetic command: %q", command)
-	}
-
-	if err := cw.writeIncrementSP(); err != nil {
-		return err
-	}
-	return nil
-}
-
-func (cw *CodeWriter) writeIncrementSP() error {
-	incrementSPString := "@SP\nM=M+1\n"
-	l := len(incrementSPString)
-	n, err := cw.outputFile.WriteString(incrementSPString)
-	if err != nil {
-		return err
-	}
-	if n < l {
-		return fmt.Errorf("wrote %d chars but expected %d chars while writing increment SP output string", n, l)
 	}
 
 	return nil
@@ -344,6 +331,7 @@ func (cw *CodeWriter) WritePushPop(command parser.CommandType, segment string, i
 			}
 		}
 
+		output.WriteString(incrementSPString)
 		n, err := cw.outputFile.WriteString(output.String())
 		if err != nil {
 			return err
@@ -352,9 +340,6 @@ func (cw *CodeWriter) WritePushPop(command parser.CommandType, segment string, i
 			return fmt.Errorf("underwrote string from call to WritePushPop with args: %s, %q, %d", command.String(), segment, index)
 		}
 
-		if err := cw.writeIncrementSP(); err != nil {
-			return err
-		}
 	}
 
 	if command == parser.C_POP {
