@@ -8,13 +8,32 @@ import (
 	"strings"
 )
 
-const newLineString = "\n"
-
 type CodeWriter struct {
 	outputFile *os.File
 	eqCounter  int    // used to make unique label assembly commands for each vm equality command
 	fileName   string // name of the file currently being translated
 	label      string
+}
+
+type asmBuilder struct {
+	b strings.Builder
+}
+
+func (ab *asmBuilder) writeString(s string) (int, error) {
+	return ab.b.WriteString(s + newLineString)
+}
+
+func (ab *asmBuilder) string() string {
+	return ab.b.String()
+}
+
+func joinASMStrings(stringList ...string) string {
+	var output asmBuilder
+	for _, str := range stringList {
+		output.writeString(str)
+	}
+
+	return output.string()
 }
 
 func NewCodeWriter(outputFile *os.File) *CodeWriter {
@@ -33,186 +52,138 @@ func (cw *CodeWriter) SetFileName(fileName string) {
 }
 
 const unsupportedCmdString = "Unsupported Command: "
+const newLineString = "\n"
 
-var incrementSPString = fmt.Sprint("@SP", newLineString, "M=M+1", newLineString)
+var cmdsWithAsm = map[string]string{
+	"add": "D=D+M",
+	"sub": "D=M-D",
+	"and": "D=D&M",
+	"or":  "D=D|M",
+	"not": "D=!M",
+	"neg": "D=-M",
+}
+var stackPushString = "@SP" + newLineString +
+	"A=M" + newLineString +
+	"M=D"
+var incrementSPString = "@SP" + newLineString + "M=M+1"
+var decrementSPString = "@SP" + newLineString + "AM=M-1"
 
-func (cw *CodeWriter) WriteArithmetic(command string) error {
-	var output strings.Builder
-	commandUnsupported := false
+func (cw *CodeWriter) getBinaryCmdOutput(cmd string) string {
+	var output string
 
-	switch command {
-	case "add":
+	switch cmd {
+	case "add", "sub", "and", "or":
 		{
-			loadArg1 := []string{
-				"@SP",
-				"AM=M-1",
-				"D=M\n",
-			}
-			loadArg2 := []string{
-				"@SP",
-				"AM=M-1",
-				"D=D+M\n",
-			}
-			pushResult := []string{
-				"@SP",
-				"A=M",
-				"M=D\n",
-			}
-			output.WriteString(strings.Join(loadArg1, "\n"))
-			output.WriteString(strings.Join(loadArg2, "\n"))
-			output.WriteString(strings.Join(pushResult, "\n"))
+			computeInstruction := cmdsWithAsm[cmd]
+			loadArg1 := joinASMStrings(
+				decrementSPString,
+				"D=M",
+			)
+			loadArg2 := joinASMStrings(
+				decrementSPString,
+				computeInstruction,
+			)
+
+			asm := loadArg1 + loadArg2 + stackPushString
+			output = asm
 		}
-	case "sub":
-		{
-
-			loadArg1 := []string{
-				"@SP",
-				"AM=M-1",
-				"D=M\n",
-			}
-			loadArg2 := []string{
-				"@SP",
-				"AM=M-1",
-				"D=M-D\n",
-			}
-			pushResult := []string{
-				"@SP",
-				"A=M",
-				"M=D\n",
-			}
-
-			output.WriteString(strings.Join(loadArg1, "\n"))
-			output.WriteString(strings.Join(loadArg2, "\n"))
-			output.WriteString(strings.Join(pushResult, "\n"))
-
-		}
-	case "neg":
-		{
-			loadArg1 := []string{
-				"@SP",
-				"AM=M-1",
-				"D=-M\n",
-			}
-			pushResult := []string{
-				"@SP",
-				"A=M",
-				"M=D\n",
-			}
-
-			output.WriteString(strings.Join(loadArg1, "\n"))
-			output.WriteString(strings.Join(pushResult, "\n"))
-		}
-	case "eq", "gt", "lt": // all three equality checks use the same logic, but different jump mnemonics
+	case "eq", "gt", "lt":
 		{
 			var jumpMnemonic string
-			switch command {
-			case "eq":
+			if cmd == "eq" {
 				jumpMnemonic = "JEQ"
-			case "gt":
+			}
+			if cmd == "gt" {
 				jumpMnemonic = "JGT"
-			case "lt":
+			}
+			if cmd == "lt" {
 				jumpMnemonic = "JLT"
 			}
 
-			loadArg1 := []string{
-				"@SP",
-				"AM=M-1",
-				"D=M\n",
-			}
-			loadArg2 := []string{
-				"@SP",
-				"AM=M-1",
-				"D=M-D\n",
-			}
-			checkEquality := []string{
+			loadArg1 := joinASMStrings(
+				decrementSPString,
+				"D=M",
+			)
+			loadArg2 := joinASMStrings(
+				decrementSPString,
+				"D=M-D",
+			)
+			checkEquality := joinASMStrings(
 				fmt.Sprintf("@EQ%d", cw.eqCounter),
 				fmt.Sprintf("D;%s", jumpMnemonic),
 				"D=0",
 				fmt.Sprintf("@PUSHEQ%d", cw.eqCounter),
 				"0;JMP",
 				fmt.Sprintf("(EQ%d)", cw.eqCounter),
-				"D=-1\n",
-			}
-			pushResult := []string{
+				"D=-1",
+			)
+			pushResult := joinASMStrings(
 				fmt.Sprintf("(PUSHEQ%d)", cw.eqCounter),
 				"@SP",
 				"A=M",
-				"M=D\n",
-			}
+				"M=D",
+			)
 
-			output.WriteString(strings.Join(loadArg1, "\n"))
-			output.WriteString(strings.Join(loadArg2, "\n"))
-			output.WriteString(strings.Join(checkEquality, "\n"))
-			output.WriteString(strings.Join(pushResult, "\n"))
+			asm := loadArg1 + loadArg2 + checkEquality + pushResult
+			output = asm
+		}
+	}
+
+	return output
+}
+
+func (cw *CodeWriter) getUnaryCmdOutput(cmd string) string {
+	var output string
+
+	computeInstruction := cmdsWithAsm[cmd]
+	loadArg := joinASMStrings(
+		decrementSPString,
+		computeInstruction,
+	)
+	output = loadArg + stackPushString
+
+	return output
+}
+
+func (cw *CodeWriter) WriteArithmetic(command string) error {
+	var output asmBuilder
+	commandUnsupported := false
+
+	switch command {
+	case "add", "sub", "and", "or":
+		{
+			_, err := output.writeString(cw.getBinaryCmdOutput(command))
+			if err != nil {
+				return err
+			}
+		}
+	case "eq", "gt", "lt": // all three equality checks use the same logic, but different jump mnemonics
+		{
+			_, err := output.writeString(cw.getBinaryCmdOutput(command))
+			if err != nil {
+				return err
+			}
 			cw.eqCounter += 1
 		}
-	case "and":
+	case "neg", "not":
 		{
-			loadArg1 := []string{
-				"@SP",
-				"AM=M-1",
-				"D=M\n",
+			_, err := output.writeString(cw.getUnaryCmdOutput(command))
+			if err != nil {
+				return err
 			}
-			loadArg2 := []string{
-				"@SP",
-				"AM=M-1",
-				"D=D&M\n",
-			}
-			pushResult := []string{
-				"@SP",
-				"A=M",
-				"M=D\n",
-			}
-			output.WriteString(strings.Join(loadArg1, "\n"))
-			output.WriteString(strings.Join(loadArg2, "\n"))
-			output.WriteString(strings.Join(pushResult, "\n"))
-		}
-	case "or":
-		{
-			loadArg1 := []string{
-				"@SP",
-				"AM=M-1",
-				"D=M\n",
-			}
-			loadArg2 := []string{
-				"@SP",
-				"AM=M-1",
-				"D=D|M\n",
-			}
-			pushResult := []string{
-				"@SP",
-				"A=M",
-				"M=D\n",
-			}
-			output.WriteString(strings.Join(loadArg1, "\n"))
-			output.WriteString(strings.Join(loadArg2, "\n"))
-			output.WriteString(strings.Join(pushResult, "\n"))
-		}
-	case "not":
-		{
-			loadArg1 := []string{
-				"@SP",
-				"AM=M-1",
-				"D=!M\n",
-			}
-			pushResult := []string{
-				"@SP",
-				"A=M",
-				"M=D\n",
-			}
-			output.WriteString(strings.Join(loadArg1, "\n"))
-			output.WriteString(strings.Join(pushResult, "\n"))
 		}
 	default:
 		{
-			output.WriteString(unsupportedCmdString + command + "\n")
+			output.writeString(unsupportedCmdString + command)
 			commandUnsupported = true
 		}
 	}
-	output.WriteString(incrementSPString)
-	if _, err := cw.outputFile.WriteString(output.String()); err != nil {
+	output.writeString(incrementSPString)
+	_, err := cw.outputFile.WriteString(output.string())
+	if err != nil {
 		return err
 	}
+
 	if commandUnsupported {
 		return fmt.Errorf("attempted to write unsupported arithmetic command: %q", command)
 	}
@@ -331,7 +302,7 @@ func (cw *CodeWriter) WritePushPop(command parser.CommandType, segment string, i
 			}
 		}
 
-		output.WriteString(incrementSPString)
+		output.WriteString(incrementSPString + newLineString)
 		n, err := cw.outputFile.WriteString(output.String())
 		if err != nil {
 			return err
