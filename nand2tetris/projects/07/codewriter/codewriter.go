@@ -12,7 +12,7 @@ type CodeWriter struct {
 	outputFile *os.File
 	eqCounter  int    // used to make unique label assembly commands for each vm equality command
 	fileName   string // name of the file currently being translated
-	label      string
+	label      string // used as a prefix in the naming of static variables encountered in the file
 }
 
 func NewCodeWriter(outputFile *os.File) *CodeWriter {
@@ -33,6 +33,7 @@ func (cw *CodeWriter) SetFileName(fileName string) {
 const unsupportedCmdString = "Unsupported Command: "
 const newLineString = "\n"
 
+// maps VM command names to their assembly equivalent
 var cmdsWithAsm = map[string]string{
 	"add": "D=D+M",
 	"sub": "D=M-D",
@@ -41,51 +42,58 @@ var cmdsWithAsm = map[string]string{
 	"not": "D=!M",
 	"neg": "D=-M",
 }
+
+// maps VM names for memory segments to their assembly equivalent
 var segmentsAsm = map[string]string{
 	"local":    "LCL",
 	"argument": "ARG",
 	"this":     "THIS",
 	"that":     "THAT",
 }
+
+// assembly to push contents of D register onto stack
 var stackPushString = "@SP" + newLineString + "A=M" + newLineString + "M=D"
+
+// assembly to pop top of stack into D register
 var stackPopString = "@SP" + newLineString + "AM=M-1" + newLineString + "D=M"
+
+// assembly to increment stack pointer (SP)
 var incrementSPString = "@SP" + newLineString + "M=M+1"
+
+// assembly to decrement stack pointer
 var decrementSPString = "@SP" + newLineString + "AM=M-1"
 
 func (cw *CodeWriter) WriteArithmetic(command string) error {
 	var output asmBuilder
+	outputList := []string{}
 	commandUnsupported := false
 
 	switch command {
-	case "add", "sub", "and", "or":
+	case "add", "sub", "and", "or", "eq", "gt", "lt":
 		{
-			_, err := output.writeASMString(cw.getBinaryCmdOutput(command))
-			if err != nil {
-				return err
+			outputList = append(outputList, cw.getBinaryCmdOutput(command))
+			if command == "eq" || command == "gt" || command == "lt" {
+				cw.eqCounter += 1
 			}
-		}
-	case "eq", "gt", "lt": // all three equality checks use the same logic, but different jump mnemonics
-		{
-			_, err := output.writeASMString(cw.getBinaryCmdOutput(command))
-			if err != nil {
-				return err
-			}
-			cw.eqCounter += 1
 		}
 	case "neg", "not":
 		{
-			_, err := output.writeASMString(cw.getUnaryCmdOutput(command))
-			if err != nil {
-				return err
-			}
+			outputList = append(outputList, cw.getUnaryCmdOutput(command))
 		}
 	default:
 		{
-			output.writeASMString(unsupportedCmdString + command)
+			outputList = append(outputList, unsupportedCmdString+command)
 			commandUnsupported = true
 		}
 	}
-	output.writeASMString(incrementSPString)
+	outputList = append(outputList, incrementSPString)
+
+	for _, str := range outputList {
+		if _, err := output.writeASMString(str); err != nil {
+			return err
+		}
+	}
+
 	_, err := cw.outputFile.WriteString(output.string())
 	if err != nil {
 		return err
@@ -104,6 +112,9 @@ func (cw *CodeWriter) WritePushPop(command parser.CommandType, segment string, i
 	}
 
 	var output asmBuilder
+	outputList := []string{}
+
+	// The assembly to load a constant into data memory is shared by every push/pop command
 	loadIndex := joinASMStrings(
 		fmt.Sprintf("@%d", index),
 		"D=A",
@@ -117,7 +128,7 @@ func (cw *CodeWriter) WritePushPop(command parser.CommandType, segment string, i
 					loadIndex,
 					stackPushString,
 				)
-				output.writeASMString(loadConstant)
+				outputList = append(outputList, loadConstant)
 			}
 		case "local", "argument", "this", "that":
 			{
@@ -128,10 +139,7 @@ func (cw *CodeWriter) WritePushPop(command parser.CommandType, segment string, i
 					"D=M",
 				)
 				push := stackPushString
-
-				output.writeASMString(loadIndex)
-				output.writeASMString(loadIndexOfSegment)
-				output.writeASMString(push)
+				outputList = append(outputList, loadIndex, loadIndexOfSegment, push)
 			}
 		case "temp":
 			{
@@ -141,9 +149,7 @@ func (cw *CodeWriter) WritePushPop(command parser.CommandType, segment string, i
 					"D=M",
 				)
 				push := stackPushString
-				output.writeASMString(loadIndex)
-				output.writeASMString(loadIndexOfSegment)
-				output.writeASMString(push)
+				outputList = append(outputList, loadIndex, loadIndexOfSegment, push)
 			}
 		case "pointer":
 			{
@@ -154,14 +160,12 @@ func (cw *CodeWriter) WritePushPop(command parser.CommandType, segment string, i
 				if index == 1 {
 					entry = "THAT"
 				}
-
 				loadAddress := joinASMStrings(
 					fmt.Sprintf("@%s", entry),
 					"D=M",
 				)
 				push := stackPushString
-				output.writeASMString(loadAddress)
-				output.writeASMString(push)
+				outputList = append(outputList, loadAddress, push)
 			}
 		case "static":
 			{
@@ -171,12 +175,10 @@ func (cw *CodeWriter) WritePushPop(command parser.CommandType, segment string, i
 					"D=M",
 				)
 				push := stackPushString
-				output.writeASMString(loadStatic)
-				output.writeASMString(push)
+				outputList = append(outputList, loadStatic, push)
 			}
 		}
-
-		output.writeASMString(incrementSPString)
+		outputList = append(outputList, incrementSPString)
 	}
 
 	if command == parser.C_POP {
@@ -198,12 +200,7 @@ func (cw *CodeWriter) WritePushPop(command parser.CommandType, segment string, i
 					"A=M",
 					"M=D",
 				)
-
-				output.writeASMString(loadIndex)
-				output.writeASMString(loadIndexOfSegment)
-				output.writeASMString(storeAddress)
-				output.writeASMString(popFromStack)
-				output.writeASMString(push)
+				outputList = append(outputList, loadIndex, loadIndexOfSegment, storeAddress, popFromStack, push)
 			}
 		case "temp":
 			{
@@ -221,12 +218,7 @@ func (cw *CodeWriter) WritePushPop(command parser.CommandType, segment string, i
 					"A=M",
 					"M=D",
 				)
-
-				output.writeASMString(loadIndex)
-				output.writeASMString(loadIndexOfSegment)
-				output.writeASMString(storeAddress)
-				output.writeASMString(popFromStack)
-				output.writeASMString(push)
+				outputList = append(outputList, loadIndex, loadIndexOfSegment, storeAddress, popFromStack, push)
 			}
 		case "pointer":
 			{
@@ -243,8 +235,7 @@ func (cw *CodeWriter) WritePushPop(command parser.CommandType, segment string, i
 					fmt.Sprintf("@%s", entry),
 					"M=D",
 				)
-				output.writeASMString(popFromStack)
-				output.writeASMString(push)
+				outputList = append(outputList, popFromStack, push)
 			}
 		case "static":
 			{
@@ -254,12 +245,16 @@ func (cw *CodeWriter) WritePushPop(command parser.CommandType, segment string, i
 					symbolCmd,
 					"M=D",
 				)
-
-				output.writeASMString(popFromStack)
-				output.writeASMString(push)
+				outputList = append(outputList, popFromStack, push)
 			}
 		case "constant":
 			return fmt.Errorf("attempted to write pop command with %q as segment and %d as index", segment, index)
+		}
+	}
+
+	for _, str := range outputList {
+		if _, err := output.writeASMString(str); err != nil {
+			return err
 		}
 	}
 
@@ -298,7 +293,7 @@ func (cw *CodeWriter) getBinaryCmdOutput(cmd string) string {
 			)
 			output = asm
 		}
-	case "eq", "gt", "lt":
+	case "eq", "gt", "lt": // all three equality checks use the same logic, but different jump mnemonics
 		{
 			var jumpMnemonic string
 			if cmd == "eq" {
@@ -319,6 +314,9 @@ func (cw *CodeWriter) getBinaryCmdOutput(cmd string) string {
 				decrementSPString,
 				"D=M-D",
 			)
+
+			// Create a unique label branch for each instance of equality command encountered in
+			// the file(s)
 			checkEquality := joinASMStrings(
 				fmt.Sprintf("@EQ%d", cw.eqCounter),
 				fmt.Sprintf("D;%s", jumpMnemonic),
@@ -334,7 +332,6 @@ func (cw *CodeWriter) getBinaryCmdOutput(cmd string) string {
 				"A=M",
 				"M=D",
 			)
-
 			asm := joinASMStrings(
 				loadArg1,
 				loadArg2,
@@ -365,6 +362,7 @@ func (cw *CodeWriter) getUnaryCmdOutput(cmd string) string {
 	return output
 }
 
+// Wraps strings.Builder so we can add newline characters automatically when building string output
 type asmBuilder struct {
 	b strings.Builder
 }
@@ -377,6 +375,7 @@ func (ab *asmBuilder) string() string {
 	return ab.b.String()
 }
 
+// Makes it explicit that we're joining together assembly output. Adds newline characters automatically.
 func joinASMStrings(strs ...string) string {
 	strList := []string{}
 	strList = append(strList, strs...)
