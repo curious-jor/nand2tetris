@@ -15,6 +15,7 @@ func main() {
 	}
 	srcPath := os.Args[1]
 
+	fmt.Printf("Translating %s ...\n", srcPath)
 	err := translate(srcPath)
 	if err != nil {
 		panic(err)
@@ -53,6 +54,7 @@ func translate(path string) error {
 	if err := codeWriter.Close(); err != nil {
 		return err
 	}
+	fmt.Printf("Created output file: %s", outputFilename)
 
 	return nil
 }
