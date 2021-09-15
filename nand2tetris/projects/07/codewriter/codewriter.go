@@ -27,13 +27,10 @@ func (ab *asmBuilder) string() string {
 	return ab.b.String()
 }
 
-func joinASMStrings(stringList ...string) string {
-	var output asmBuilder
-	for _, str := range stringList {
-		output.writeString(str)
-	}
-
-	return output.string()
+func joinASMStrings(strs ...string) string {
+	strList := []string{}
+	strList = append(strList, strs...)
+	return strings.Join(strList, "\n")
 }
 
 func NewCodeWriter(outputFile *os.File) *CodeWriter {
@@ -62,9 +59,14 @@ var cmdsWithAsm = map[string]string{
 	"not": "D=!M",
 	"neg": "D=-M",
 }
-var stackPushString = "@SP" + newLineString +
-	"A=M" + newLineString +
-	"M=D"
+var segmentsAsm = map[string]string{
+	"local":    "LCL",
+	"argument": "ARG",
+	"this":     "THIS",
+	"that":     "THAT",
+}
+var stackPushString = "@SP" + newLineString + "A=M" + newLineString + "M=D"
+var stackPopString = "@SP" + newLineString + "AM=M-1" + newLineString + "D=M"
 var incrementSPString = "@SP" + newLineString + "M=M+1"
 var decrementSPString = "@SP" + newLineString + "AM=M-1"
 
@@ -84,7 +86,11 @@ func (cw *CodeWriter) getBinaryCmdOutput(cmd string) string {
 				computeInstruction,
 			)
 
-			asm := loadArg1 + loadArg2 + stackPushString
+			asm := joinASMStrings(
+				loadArg1,
+				loadArg2,
+				stackPushString,
+			)
 			output = asm
 		}
 	case "eq", "gt", "lt":
@@ -124,7 +130,12 @@ func (cw *CodeWriter) getBinaryCmdOutput(cmd string) string {
 				"M=D",
 			)
 
-			asm := loadArg1 + loadArg2 + checkEquality + pushResult
+			asm := joinASMStrings(
+				loadArg1,
+				loadArg2,
+				checkEquality,
+				pushResult,
+			)
 			output = asm
 		}
 	}
@@ -140,7 +151,11 @@ func (cw *CodeWriter) getUnaryCmdOutput(cmd string) string {
 		decrementSPString,
 		computeInstruction,
 	)
-	output = loadArg + stackPushString
+	output = joinASMStrings(
+		loadArg,
+		stackPushString,
+		"\n",
+	)
 
 	return output
 }
@@ -196,72 +211,53 @@ func (cw *CodeWriter) WritePushPop(command parser.CommandType, segment string, i
 		return fmt.Errorf("attempted to write %s as push or pop command. expected C_PUSH or C_POP", command.String())
 	}
 
-	var output strings.Builder
+	var output asmBuilder
 	if command == parser.C_PUSH {
 		switch segment {
 		case "constant":
 			{
-				loadConstant := []string{
+				loadConstant := joinASMStrings(
 					fmt.Sprintf("@%d", index),
 					"D=A",
 					"@SP",
 					"A=M",
-					"M=D\n",
-				}
-				output.WriteString(strings.Join(loadConstant, "\n"))
+					"M=D",
+				)
+				output.writeString(loadConstant)
 			}
 		case "local", "argument", "this", "that":
 			{
-				var segmentName string
-				switch segment {
-				case "local":
-					segmentName = "LCL"
-				case "argument":
-					segmentName = "ARG"
-				case "this":
-					segmentName = "THIS"
-				case "that":
-					segmentName = "THAT"
-				}
-
-				loadIndex := []string{
+				segmentName := segmentsAsm[segment]
+				loadIndex := joinASMStrings(
 					fmt.Sprintf("@%d", index),
-					"D=A\n",
-				}
-				loadIndexOfSegment := []string{
+					"D=A",
+				)
+				loadIndexOfSegment := joinASMStrings(
 					fmt.Sprintf("@%s", segmentName),
 					"A=D+M",
-					"D=M\n",
-				}
-				push := []string{
-					"@SP",
-					"A=M",
-					"M=D\n",
-				}
+					"D=M",
+				)
+				push := stackPushString
 
-				output.WriteString(strings.Join(loadIndex, "\n"))
-				output.WriteString(strings.Join(loadIndexOfSegment, "\n"))
-				output.WriteString(strings.Join(push, "\n"))
+				output.writeString(loadIndex)
+				output.writeString(loadIndexOfSegment)
+				output.writeString(push)
 			}
 		case "temp":
 			{
-				loadIndex := []string{
+				loadIndex := joinASMStrings(
 					fmt.Sprintf("@%d", index),
-					"D=A\n",
-				}
-				loadIndexOfSegment := []string{
+					"D=A",
+				)
+				loadIndexOfSegment := joinASMStrings(
 					"@R5",
 					"A=D+A",
-					"D=M\n",
-				}
-				push := []string{
-					"@SP",
-					"A=M",
-					"M=D\n",
-				}
-				output.WriteString(strings.Join(loadIndex, "\n"))
-				output.WriteString(strings.Join(loadIndexOfSegment, "\n"))
-				output.WriteString(strings.Join(push, "\n"))
+					"D=M",
+				)
+				push := stackPushString
+				output.writeString(joinASMStrings(loadIndex))
+				output.writeString(joinASMStrings(loadIndexOfSegment))
+				output.writeString(joinASMStrings(push))
 			}
 		case "pointer":
 			{
@@ -273,120 +269,90 @@ func (cw *CodeWriter) WritePushPop(command parser.CommandType, segment string, i
 					entry = "THAT"
 				}
 
-				loadAddress := []string{
+				loadAddress := joinASMStrings(
 					fmt.Sprintf("@%s", entry),
-					"D=M\n",
-				}
-				push := []string{
-					"@SP",
-					"A=M",
-					"M=D\n",
-				}
-				output.WriteString(strings.Join(loadAddress, "\n"))
-				output.WriteString(strings.Join(push, "\n"))
+					"D=M",
+				)
+				push := stackPushString
+				output.writeString(loadAddress)
+				output.writeString(push)
 			}
 		case "static":
 			{
 				symbolCmd := fmt.Sprintf("@%s.%d", cw.label, index)
-				loadStatic := []string{
+				loadStatic := joinASMStrings(
 					symbolCmd,
-					"D=M\n",
-				}
-				push := []string{
-					"@SP",
-					"A=M",
-					"M=D\n",
-				}
-				output.WriteString(strings.Join(loadStatic, "\n"))
-				output.WriteString(strings.Join(push, "\n"))
+					"D=M",
+				)
+				push := stackPushString
+				output.writeString(loadStatic)
+				output.writeString(push)
 			}
 		}
 
-		output.WriteString(incrementSPString + newLineString)
-		n, err := cw.outputFile.WriteString(output.String())
+		output.writeString(incrementSPString)
+		_, err := cw.outputFile.WriteString(output.string())
 		if err != nil {
 			return err
 		}
-		if n < len(output.String()) {
-			return fmt.Errorf("underwrote string from call to WritePushPop with args: %s, %q, %d", command.String(), segment, index)
-		}
-
 	}
 
 	if command == parser.C_POP {
 		switch segment {
 		case "local", "argument", "this", "that":
 			{
-				var segmentName string
-				switch segment {
-				case "local":
-					segmentName = "LCL"
-				case "argument":
-					segmentName = "ARG"
-				case "this":
-					segmentName = "THIS"
-				case "that":
-					segmentName = "THAT"
-				}
-				loadIndex := []string{
+				segmentName := segmentsAsm[segment]
+				loadIndex := joinASMStrings(
 					fmt.Sprintf("@%d", index),
-					"D=A\n",
-				}
-				loadIndexOfSegment := []string{
+					"D=A",
+				)
+				loadIndexOfSegment := joinASMStrings(
 					fmt.Sprintf("@%s", segmentName),
-					"D=D+M\n",
-				}
-				storeAddress := []string{
+					"D=D+M",
+				)
+				storeAddress := joinASMStrings(
 					"@R13",
-					"M=D\n",
-				}
-				popFromStack := []string{
-					"@SP",
-					"AM=M-1",
-					"D=M\n",
-				}
-				push := []string{
+					"M=D",
+				)
+				popFromStack := stackPopString
+				push := joinASMStrings(
 					"@R13",
 					"A=M",
-					"M=D\n",
-				}
+					"M=D",
+				)
 
-				output.WriteString(strings.Join(loadIndex, "\n"))
-				output.WriteString(strings.Join(loadIndexOfSegment, "\n"))
-				output.WriteString(strings.Join(storeAddress, "\n"))
-				output.WriteString(strings.Join(popFromStack, "\n"))
-				output.WriteString(strings.Join(push, "\n"))
+				output.writeString(loadIndex)
+				output.writeString(loadIndexOfSegment)
+				output.writeString(storeAddress)
+				output.writeString(popFromStack)
+				output.writeString(push)
 			}
 		case "temp":
 			{
-				loadIndex := []string{
+				loadIndex := joinASMStrings(
 					fmt.Sprintf("@%d", index),
-					"D=A\n",
-				}
-				loadIndexOfSegment := []string{
+					"D=A",
+				)
+				loadIndexOfSegment := joinASMStrings(
 					"@R5",
-					"D=D+A\n",
-				}
-				storeAddress := []string{
+					"D=D+A",
+				)
+				storeAddress := joinASMStrings(
 					"@R13",
-					"M=D\n",
-				}
-				popFromStack := []string{
-					"@SP",
-					"AM=M-1",
-					"D=M\n",
-				}
-				push := []string{
+					"M=D",
+				)
+				popFromStack := stackPopString
+				push := joinASMStrings(
 					"@R13",
 					"A=M",
-					"M=D\n",
-				}
+					"M=D",
+				)
 
-				output.WriteString(strings.Join(loadIndex, "\n"))
-				output.WriteString(strings.Join(loadIndexOfSegment, "\n"))
-				output.WriteString(strings.Join(storeAddress, "\n"))
-				output.WriteString(strings.Join(popFromStack, "\n"))
-				output.WriteString(strings.Join(push, "\n"))
+				output.writeString(loadIndex)
+				output.writeString(loadIndexOfSegment)
+				output.writeString(storeAddress)
+				output.writeString(popFromStack)
+				output.writeString(push)
 			}
 		case "pointer":
 			{
@@ -398,44 +364,33 @@ func (cw *CodeWriter) WritePushPop(command parser.CommandType, segment string, i
 					entry = "THAT"
 				}
 
-				popFromStack := []string{
-					"@SP",
-					"AM=M-1",
-					"D=M\n",
-				}
-				push := []string{
+				popFromStack := stackPopString
+				push := joinASMStrings(
 					fmt.Sprintf("@%s", entry),
-					"M=D\n",
-				}
-				output.WriteString(strings.Join(popFromStack, "\n"))
-				output.WriteString(strings.Join(push, "\n"))
+					"M=D",
+				)
+				output.writeString(popFromStack)
+				output.writeString(push)
 			}
 		case "static":
 			{
-				popFromStack := []string{
-					"@SP",
-					"AM=M-1",
-					"D=M\n",
-				}
+				popFromStack := stackPopString
 				symbolCmd := fmt.Sprintf("@%s.%d", cw.label, index)
-				push := []string{
+				push := joinASMStrings(
 					symbolCmd,
-					"M=D\n",
-				}
+					"M=D",
+				)
 
-				output.WriteString(strings.Join(popFromStack, "\n"))
-				output.WriteString(strings.Join(push, "\n"))
+				output.writeString(popFromStack)
+				output.writeString(push)
 			}
 		case "constant":
 			return fmt.Errorf("attempted to write pop command with %q as segment and %d as index", segment, index)
 		}
 
-		n, err := cw.outputFile.WriteString(output.String())
+		_, err := cw.outputFile.WriteString(output.string())
 		if err != nil {
 			return err
-		}
-		if n < len(output.String()) {
-			return fmt.Errorf("underwrote string from call to WritePushPop with args: %s, %q, %d", command.String(), segment, index)
 		}
 	}
 

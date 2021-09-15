@@ -65,7 +65,7 @@ func TestStackArithmetic(t *testing.T) {
 }
 
 // Memory access tests from book
-func TestMemoryAccessBasicTest(t *testing.T) {
+func TestMemoryAccess(t *testing.T) {
 	t.Parallel()
 	tests := []struct {
 		name  string
