@@ -78,15 +78,6 @@ func (p *Parser) HasMoreCommands() bool {
 	return p.lxr.HasMoreTokens()
 }
 
-func isArithmeticCommand(command string) bool {
-	switch command {
-	case "add", "sub", "neg", "eq", "gt", "lt", "and", "or", "not":
-		return true
-	default:
-		return false
-	}
-}
-
 func (p *Parser) parseArithmeticCommand() (*Command, error) {
 	return &Command{ct: C_ARITHMETIC, arg1: p.lexeme.Value, arg2: emptyArg2}, nil
 }
@@ -152,13 +143,25 @@ func (p *Parser) Advance() error {
 	switch p.lexeme.Token {
 	case lexer.COMMAND:
 		{
-			if isArithmeticCommand(p.lexeme.Value) {
-				parsedCmd, err = p.parseArithmeticCommand()
+			switch p.lexeme.Value {
+			case "add", "sub", "neg", "eq", "gt", "lt", "and", "or", "not":
+				{
+					parsedCmd, err = p.parseArithmeticCommand()
+				}
+			case "push", "pop":
+				{
+					parsedCmd, err = p.parsePushPopCommand()
+				}
+			default:
+				{
+					parsedCmd = nil
+					err = fmt.Errorf("attempted to parse unsupported command: %q as Commmand", p.lexeme.Value)
+				}
 			}
-
-			if p.lexeme.Value == "push" || p.lexeme.Value == "pop" {
-				parsedCmd, err = p.parsePushPopCommand()
-			}
+		}
+	default:
+		{
+			err = fmt.Errorf("attempted to parse non-Command token (%s, %q) as a non-terminal", p.lexeme.Token.String(), p.lexeme.Value)
 		}
 	}
 	p.cmd = parsedCmd
@@ -172,7 +175,6 @@ var emptyCommandType = CommandType(-1)
 
 func (p *Parser) CommandType() CommandType {
 	if p.cmd == nil {
-		fmt.Println("attempted to get command type of empty command")
 		return emptyCommandType
 	}
 	return p.cmd.ct
