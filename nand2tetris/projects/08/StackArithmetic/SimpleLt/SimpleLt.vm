@@ -1,0 +1,6 @@
+push constant 6
+push constant 6
+lt
+push constant 6
+push constant 7
+lt
