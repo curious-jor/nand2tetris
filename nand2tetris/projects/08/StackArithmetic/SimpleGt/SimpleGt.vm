@@ -1,6 +1,0 @@
-push constant 6
-push constant 6
-gt
-push constant 7
-push constant 6
-gt
