@@ -36,10 +36,20 @@ func (t Token) String() string {
 type Lexer struct {
 	r    *bufio.Reader
 	prev Token
+	fp   FilePosition
+}
+
+type FilePosition struct {
+	Line int
+	Col  int
 }
 
 func NewLexer(f *os.File) *Lexer {
-	return &Lexer{r: bufio.NewReader(f), prev: NEWLINE}
+	return &Lexer{
+		r:    bufio.NewReader(f),
+		prev: NEWLINE,
+		fp:   FilePosition{Line: 1, Col: 1},
+	}
 }
 
 const eofRune = rune(0)
@@ -78,28 +88,32 @@ type Lexeme struct {
 	Value string
 }
 
-func (l *Lexer) NextToken() *Lexeme {
+func (l *Lexer) NextToken() (FilePosition, *Lexeme) {
 	var currChar = ' '
-
 	for isWhitespace(currChar) {
 		currChar = l.getChar()
+		l.fp.Col += 1
 	}
 
 	if currChar == eofRune {
 		l.prev = EOF
-		return &Lexeme{EOF, EOF.String()}
+		return l.fp, &Lexeme{EOF, EOF.String()}
 	}
 
 	if currChar == newlineRune {
 		l.prev = NEWLINE
+		l.fp.Line += 1
+		l.fp.Col = 1
 		return l.NextToken()
 	}
 
 	if isLetter(currChar) || isDigit(currChar) {
+		startingPos := FilePosition{Line: l.fp.Line, Col: l.fp.Col - 1}
 		charSeq := []rune{currChar}
 		for currChar = l.getChar(); !isWhitespace(currChar); {
 			charSeq = append(charSeq, currChar)
 			currChar = l.getChar()
+			l.fp.Col += 1
 		}
 
 		if err := l.unread(); err != nil {
@@ -108,17 +122,17 @@ func (l *Lexer) NextToken() *Lexeme {
 
 		if _, err := strconv.ParseInt(string(charSeq), 10, 16); err == nil {
 			l.prev = ARG
-			return &Lexeme{ARG, string(charSeq)}
+			return startingPos, &Lexeme{ARG, string(charSeq)}
 		}
 
 		if l.prev == NEWLINE {
 			l.prev = COMMAND
-			return &Lexeme{COMMAND, string(charSeq)}
+			return startingPos, &Lexeme{COMMAND, string(charSeq)}
 		}
 
 		if l.prev == COMMAND || l.prev == ARG {
 			l.prev = ARG
-			return &Lexeme{ARG, string(charSeq)}
+			return startingPos, &Lexeme{ARG, string(charSeq)}
 		}
 	}
 
@@ -136,7 +150,8 @@ func (l *Lexer) NextToken() *Lexeme {
 	thisChar := currChar
 	l.prev = ILLEGAL
 	_ = l.getChar()
-	return &Lexeme{ILLEGAL, string(thisChar)}
+	l.fp.Col += 1
+	return l.fp, &Lexeme{ILLEGAL, string(thisChar)}
 }
 
 func (l *Lexer) HasMoreTokens() bool {

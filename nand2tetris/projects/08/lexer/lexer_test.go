@@ -27,11 +27,11 @@ func TestSimpleAdd(t *testing.T) {
 	}
 
 	i := 0
-	for lexeme := lxr.NextToken(); lexeme.Token != EOF; {
+	for _, lexeme := lxr.NextToken(); lexeme.Token != EOF; {
 		if expected[i].token != lexeme.Token || expected[i].value != lexeme.Value {
 			t.Errorf("comparison failed at token %d expected (%s, %q) got (%s, %q)", i, expected[i].token.String(), expected[i].value, lexeme.Token.String(), lexeme.Value)
 		}
-		lexeme = lxr.NextToken()
+		_, lexeme = lxr.NextToken()
 		i += 1
 	}
 }
@@ -145,10 +145,43 @@ func TestStackTest(t *testing.T) {
 	}
 
 	for i, expctd := range expected {
-		actual := lxr.NextToken()
+		_, actual := lxr.NextToken()
 
 		if !expctd.Equals(actual) {
 			t.Errorf("comparison failed at token %d. expected %#v got %#v", i, expctd, actual)
+		}
+	}
+}
+
+func TestSimpleAddFilePosition(t *testing.T) {
+	f, err := os.Open("../StackArithmetic/SimpleAdd/SimpleAdd.vm")
+	if err != nil {
+		panic(err)
+	}
+	defer f.Close()
+
+	lxr := NewLexer(f)
+
+	expected := []struct {
+		lexeme *Lexeme
+		line   int
+		col    int
+	}{
+		{&Lexeme{Token: COMMAND, Value: "push"}, 7, 1},
+		{&Lexeme{Token: ARG, Value: "constant"}, 7, 6},
+		{&Lexeme{Token: ARG, Value: "7"}, 7, 15},
+		{&Lexeme{Token: COMMAND, Value: "push"}, 8, 1},
+		{&Lexeme{Token: ARG, Value: "constant"}, 8, 6},
+		{&Lexeme{Token: ARG, Value: "8"}, 8, 15},
+		{&Lexeme{Token: COMMAND, Value: "add"}, 9, 1},
+	}
+
+	for _, exp := range expected {
+		actualPos, actualLex := lxr.NextToken()
+		if !(exp.lexeme.Equals(actualLex)) || exp.line != actualPos.Line || exp.col != actualPos.Col {
+			t.Errorf("expected %v, Line: %d, Col: %d but got %v, Line: %d, Col: %d)",
+				exp.lexeme, exp.line, exp.col, actualLex, actualPos.Line, actualPos.Col,
+			)
 		}
 	}
 }

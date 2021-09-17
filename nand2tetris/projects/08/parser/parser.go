@@ -53,6 +53,7 @@ type Parser struct {
 	lxr    *lexer.Lexer
 	lexeme *lexer.Lexeme
 	cmd    *Command
+	fp     lexer.FilePosition
 }
 
 func NewParser(file *os.File) *Parser {
@@ -64,13 +65,14 @@ func NewParser(file *os.File) *Parser {
 	lexer := lexer.NewLexer(file)
 
 	// Load the first token from the input
-	initialLex := lexer.NextToken()
+	pos, initialLex := lexer.NextToken()
 	return &Parser{
 		f:      file,
 		rdr:    reader,
 		lxr:    lexer,
 		lexeme: initialLex,
 		cmd:    nil,
+		fp:     pos,
 	}
 }
 
@@ -91,18 +93,22 @@ func (p *Parser) parsePushPopCommand() (*Command, error) {
 		currCmdType = C_POP
 	}
 
-	segment := p.lxr.NextToken() // consume segment
+	pos, segment := p.lxr.NextToken() // consume segment
+	p.fp = pos
 	if segment.Token != lexer.ARG {
 		return &Command{
 				ct: currCmdType, arg1: segment.Value,
 				arg2: emptyArg2,
-			}, &ParserCouldNotParseError{
-				lxm: segment,
-				msg: fmt.Sprintf("expected ARG token while parsing \"push\" command got %s instead\n", segment.Token),
+			}, &ParserError{
+				line: p.fp.Line,
+				col:  p.fp.Col,
+				lxm:  segment,
+				msg:  fmt.Sprintf("expected ARG token while parsing \"push\" command got %s instead\n", segment.Token),
 			}
 	}
 
-	index := p.lxr.NextToken() // consume index
+	pos, index := p.lxr.NextToken() // consume index
+	p.fp = pos
 	if index.Token != lexer.ARG {
 		fmt.Printf("expected ARG token while parsing \"push\" command got %s instead\n", index.Token)
 	}
@@ -113,9 +119,11 @@ func (p *Parser) parsePushPopCommand() (*Command, error) {
 				ct:   currCmdType,
 				arg1: segment.Value,
 				arg2: emptyArg2,
-			}, &ParserCouldNotParseError{
-				lxm: index,
-				msg: fmt.Sprintf("could not convert %q to int while parsing push command (%s, %q)", index, index.Token.String(), index),
+			}, &ParserError{
+				line: p.fp.Line,
+				col:  p.fp.Col,
+				lxm:  index,
+				msg:  fmt.Sprintf("could not convert %q to int while parsing push command (%s, %q)", index, index.Token.String(), index),
 			}
 	}
 
@@ -124,13 +132,15 @@ func (p *Parser) parsePushPopCommand() (*Command, error) {
 
 var ErrParserNoMoreCommands = errors.New("parser has no more commands")
 
-type ParserCouldNotParseError struct {
-	lxm *lexer.Lexeme
-	msg string
+type ParserError struct {
+	line int
+	col  int
+	lxm  *lexer.Lexeme
+	msg  string
 }
 
-func (e *ParserCouldNotParseError) Error() string {
-	return e.msg
+func (e *ParserError) Error() string {
+	return fmt.Sprintf("Error (Line: %d, Col: %d) - %s", e.line, e.col, e.msg)
 }
 
 func (p *Parser) Advance() error {
@@ -155,19 +165,19 @@ func (p *Parser) Advance() error {
 			default:
 				{
 					parsedCmd = nil
-					err = fmt.Errorf("attempted to parse unsupported command: %q as Commmand", p.lexeme.Value)
+					err = &ParserError{line: p.fp.Line, col: p.fp.Col, msg: fmt.Sprintf("attempted to parse unsupported command: %q as Commmand", p.lexeme.Value)}
 				}
 			}
 		}
 	default:
 		{
-			err = fmt.Errorf("attempted to parse non-Command token (%s, %q) as a non-terminal", p.lexeme.Token.String(), p.lexeme.Value)
+			err = &ParserError{line: p.fp.Line, col: p.fp.Col, msg: fmt.Sprintf("attempted to parse non-Command token (%s, %q) as a non-terminal", p.lexeme.Token.String(), p.lexeme.Value)}
 		}
 	}
 	p.cmd = parsedCmd
 
 	// Update parser with next lexeme
-	p.lexeme = p.lxr.NextToken()
+	_, p.lexeme = p.lxr.NextToken()
 	return err
 }
 
@@ -195,7 +205,6 @@ func commandHasArg2(ct CommandType) bool {
 
 func (p *Parser) Arg2() int {
 	if curr := p.CommandType(); !commandHasArg2(curr) {
-		fmt.Printf("attempted to call Arg2 on a command with the incorrect type. got %#v\n", curr)
 		return emptyArg2
 	}
 

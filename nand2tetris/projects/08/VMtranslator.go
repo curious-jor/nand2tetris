@@ -40,7 +40,10 @@ func translate(path string) error {
 	codeWriter := codewriter.NewCodeWriter(outputFile)
 
 	for p.HasMoreCommands() {
-		p.Advance()
+		err := p.Advance()
+		if err != nil {
+			fmt.Println(err)
+		}
 
 		if p.CommandType() == parser.C_ARITHMETIC {
 			codeWriter.WriteArithmetic(p.Arg1())
