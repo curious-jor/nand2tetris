@@ -185,3 +185,65 @@ func TestSimpleAddFilePosition(t *testing.T) {
 		}
 	}
 }
+
+func TestBasicLoopFilePosition(t *testing.T) {
+	f, err := os.Open("../ProgramFlow/BasicLoop/BasicLoop.vm")
+	if err != nil {
+		panic(err)
+	}
+	defer f.Close()
+
+	lxr := NewLexer(f)
+
+	expected := []struct {
+		lexeme *Lexeme
+		line   int
+		col    int
+	}{
+		{&Lexeme{Token: COMMAND, Value: "push"}, 9, 1},
+		{&Lexeme{Token: ARG, Value: "constant"}, 9, 6},
+		{&Lexeme{Token: ARG, Value: "0"}, 9, 15},
+		{&Lexeme{Token: COMMAND, Value: "pop"}, 10, 1},
+		{&Lexeme{Token: ARG, Value: "local"}, 10, 5},
+		{&Lexeme{Token: ARG, Value: "0"}, 10, 11},
+		{&Lexeme{Token: COMMAND, Value: "label"}, 11, 1},
+		{&Lexeme{Token: ARG, Value: "LOOP_START"}, 11, 7},
+		{&Lexeme{Token: COMMAND, Value: "push"}, 12, 1},
+		{&Lexeme{Token: ARG, Value: "argument"}, 12, 6},
+		{&Lexeme{Token: ARG, Value: "0"}, 12, 15},
+		{&Lexeme{Token: COMMAND, Value: "push"}, 13, 1},
+		{&Lexeme{Token: ARG, Value: "local"}, 13, 6},
+		{&Lexeme{Token: ARG, Value: "0"}, 13, 12},
+		{&Lexeme{Token: COMMAND, Value: "add"}, 14, 1},
+		{&Lexeme{Token: COMMAND, Value: "pop"}, 15, 1},
+		{&Lexeme{Token: ARG, Value: "local"}, 15, 5},
+		{&Lexeme{Token: ARG, Value: "0"}, 15, 11},
+		{&Lexeme{Token: COMMAND, Value: "push"}, 16, 1},
+		{&Lexeme{Token: ARG, Value: "argument"}, 16, 6},
+		{&Lexeme{Token: ARG, Value: "0"}, 16, 15},
+		{&Lexeme{Token: COMMAND, Value: "push"}, 17, 1},
+		{&Lexeme{Token: ARG, Value: "constant"}, 17, 6},
+		{&Lexeme{Token: ARG, Value: "1"}, 17, 15},
+		{&Lexeme{Token: COMMAND, Value: "sub"}, 18, 1},
+		{&Lexeme{Token: COMMAND, Value: "pop"}, 19, 1},
+		{&Lexeme{Token: ARG, Value: "argument"}, 19, 5},
+		{&Lexeme{Token: ARG, Value: "0"}, 19, 14},
+		{&Lexeme{Token: COMMAND, Value: "push"}, 20, 1},
+		{&Lexeme{Token: ARG, Value: "argument"}, 20, 6},
+		{&Lexeme{Token: ARG, Value: "0"}, 20, 15},
+		{&Lexeme{Token: COMMAND, Value: "if-goto"}, 21, 1},
+		{&Lexeme{Token: ARG, Value: "LOOP_START"}, 21, 9},
+		{&Lexeme{Token: COMMAND, Value: "push"}, 22, 1},
+		{&Lexeme{Token: ARG, Value: "local"}, 22, 6},
+		{&Lexeme{Token: ARG, Value: "0"}, 22, 12},
+	}
+
+	for _, exp := range expected {
+		actualPos, actualLex := lxr.NextToken()
+		if !(exp.lexeme.Equals(actualLex)) || exp.line != actualPos.Line || exp.col != actualPos.Col {
+			t.Errorf("expected %v, Line: %d, Col: %d but got %v, Line: %d, Col: %d)",
+				exp.lexeme, exp.line, exp.col, actualLex, actualPos.Line, actualPos.Col,
+			)
+		}
+	}
+}
