@@ -2,7 +2,6 @@ package parser
 
 import (
 	"VMtranslator/lexer"
-	"bufio"
 	"errors"
 	"fmt"
 	"os"
@@ -49,7 +48,6 @@ var emptyArg2 = -1
 
 type Parser struct {
 	f      *os.File
-	rdr    *bufio.Reader
 	lxr    *lexer.Lexer
 	lexeme *lexer.Lexeme
 	cmd    *Command
@@ -60,15 +58,12 @@ func NewParser(file *os.File) *Parser {
 	if file == nil {
 		return &Parser{}
 	}
-
-	reader := bufio.NewReader(file)
 	lexer := lexer.NewLexer(file)
 
 	// Load the first token from the input
 	pos, initialLex := lexer.NextToken()
 	return &Parser{
 		f:      file,
-		rdr:    reader,
 		lxr:    lexer,
 		lexeme: initialLex,
 		cmd:    nil,
@@ -177,7 +172,7 @@ func (p *Parser) Advance() error {
 	p.cmd = parsedCmd
 
 	// Update parser with next lexeme
-	_, p.lexeme = p.lxr.NextToken()
+	p.fp, p.lexeme = p.lxr.NextToken()
 	return err
 }
 
