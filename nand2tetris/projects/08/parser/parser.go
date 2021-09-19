@@ -157,6 +157,37 @@ func (p *Parser) Advance() error {
 				{
 					parsedCmd, err = p.parsePushPopCommand()
 				}
+			case "label":
+				{
+					// consume label
+					pos, label := p.lxr.NextToken()
+					p.fp = pos
+					if label.Token != lexer.ARG {
+						err = &ParserError{
+							line: p.fp.Line,
+							col:  p.fp.Col,
+							lxm:  p.lexeme,
+							msg:  fmt.Sprintf("expected ARG token while parsing \"label\" command but got %s", label.Token.String()),
+						}
+					}
+					parsedCmd = &Command{ct: C_LABEL, arg1: label.Value, arg2: emptyArg2}
+				}
+			case "if-goto":
+				{
+					// consume label
+					pos, label := p.lxr.NextToken()
+					p.fp = pos
+					if label.Token != lexer.ARG {
+						err = &ParserError{
+							line: p.fp.Line,
+							col:  p.fp.Col,
+							lxm:  p.lexeme,
+							msg:  fmt.Sprintf("expected ARG token while parsing \"if-goto\" command but got %s", label.Token.String()),
+						}
+					}
+					parsedCmd = &Command{ct: C_IF, arg1: label.Value, arg2: emptyArg2}
+				}
+
 			default:
 				{
 					parsedCmd = nil

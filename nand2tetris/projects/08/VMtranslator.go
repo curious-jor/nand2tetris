@@ -52,6 +52,14 @@ func translate(path string) error {
 		if ct := p.CommandType(); ct == parser.C_PUSH || ct == parser.C_POP {
 			codeWriter.WritePushPop(p.CommandType(), p.Arg1(), p.Arg2())
 		}
+
+		if ct := p.CommandType(); ct == parser.C_IF {
+			codeWriter.WriteIf(p.Arg1())
+		}
+
+		if ct := p.CommandType(); ct == parser.C_LABEL {
+			codeWriter.WriteLabel(p.Arg1())
+		}
 	}
 
 	if err := codeWriter.Close(); err != nil {

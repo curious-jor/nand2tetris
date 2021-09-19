@@ -266,6 +266,45 @@ func (cw *CodeWriter) WritePushPop(command parser.CommandType, segment string, i
 	return nil
 }
 
+func (cw *CodeWriter) WriteLabel(label string) error {
+	output := joinASMStrings(
+		fmt.Sprintf("(%s)", label),
+		"",
+	)
+	_, err := cw.outputFile.WriteString(output)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func (cw *CodeWriter) WriteIf(label string) error {
+	var output asmBuilder
+	outputList := []string{}
+
+	outputList = append(outputList, stackPopString)
+
+	loadLabel := fmt.Sprintf("@%s", label)
+	jump := joinASMStrings(
+		loadLabel,
+		"D;JNE",
+	)
+
+	outputList = append(outputList, jump)
+
+	for _, str := range outputList {
+		if _, err := output.writeASMString(str); err != nil {
+			return err
+		}
+	}
+
+	_, err := cw.outputFile.WriteString(output.string())
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
 func (cw *CodeWriter) Close() error {
 	return cw.outputFile.Close()
 }
