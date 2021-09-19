@@ -3,6 +3,7 @@ package parser
 import (
 	"VMtranslator/lexer"
 	"os"
+	"strings"
 	"testing"
 )
 
@@ -182,6 +183,86 @@ func TestArg2(t *testing.T) {
 			if actual := parser.Arg2(); test.expected != actual {
 				t.Errorf("expected %q got %q", test.expected, actual)
 			}
+		})
+	}
+
+}
+
+func TestParserReportsLineColNumsOnError(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name     string
+		input    string
+		expected []lexer.FilePosition
+	}{
+		{"lathe LOOP_STAR", "lathe LOOP_STAR\n",
+			[]lexer.FilePosition{
+				{Line: 1, Col: 1},
+				{Line: 1, Col: 7},
+			},
+		},
+		{"modified basic loop with mispelled label and if-goto",
+			strings.Join([]string{
+				"push constant 0",
+				"pop local 0",
+				"lobel",
+				"push argument 0",
+				"push local 0",
+				"add",
+				"pop local 0",
+				"push argument 0",
+				"push constant 1",
+				"sub",
+				"pop argument 0",
+				"push argument 0",
+				"if-gotop",
+				"push local 0",
+				""}, "\n"),
+			[]lexer.FilePosition{
+				{Line: 3, Col: 1},
+				{Line: 13, Col: 1},
+			},
+		},
+	}
+
+	for _, test := range tests {
+		test := test
+		errorPositions := []lexer.FilePosition{}
+		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
+			tempDir := t.TempDir()
+			tempFile, err := os.CreateTemp(tempDir, "*.vm")
+			if err != nil {
+				panic(err)
+			}
+
+			if _, err := tempFile.WriteString(test.input); err != nil {
+				panic(err)
+			}
+			tempFile.Seek(0, 0)
+
+			p := NewParser(tempFile)
+			for p.HasMoreCommands() {
+				err := p.Advance()
+				if err != nil {
+					if perr, ok := err.(*ParserError); ok {
+						errorPositions = append(errorPositions, lexer.FilePosition{Line: perr.line, Col: perr.col})
+					}
+				}
+			}
+
+			if len(errorPositions) != len(test.expected) {
+				t.Errorf("expected %d errors but got %d", len(test.expected), len(errorPositions))
+			}
+
+			for i := 0; i < len(errorPositions); i++ {
+				if ep, exp := errorPositions[i], test.expected[i]; ep.Col != exp.Col || ep.Line != exp.Line {
+					t.Errorf("expected error at line, col (%d,%d) but got (%d, %d)", exp.Line, exp.Col, ep.Line, ep.Col)
+				}
+			}
+
+			tempFile.Close()
+			os.Remove(tempFile.Name())
 		})
 	}
 
