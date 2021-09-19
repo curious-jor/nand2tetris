@@ -83,6 +83,10 @@ func isDigit(ch rune) bool {
 	return ch >= '0' && ch <= '9'
 }
 
+func isSymbolChar(ch rune) bool {
+	return ch == '.' || ch == '#' || ch == '_' || ch == '-'
+}
+
 type Lexeme struct {
 	Token Token
 	Value string
@@ -110,7 +114,7 @@ func (l *Lexer) NextToken() (FilePosition, *Lexeme) {
 	if isLetter(currChar) || isDigit(currChar) {
 		startingPos := FilePosition{Line: l.fp.Line, Col: l.fp.Col - 1}
 		charSeq := []rune{currChar}
-		for currChar = l.getChar(); !isWhitespace(currChar); {
+		for currChar = l.getChar(); isDigit(currChar) || isLetter(currChar) || isSymbolChar(currChar); {
 			charSeq = append(charSeq, currChar)
 			currChar = l.getChar()
 			l.fp.Col += 1
