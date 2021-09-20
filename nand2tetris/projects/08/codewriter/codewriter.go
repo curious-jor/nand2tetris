@@ -278,6 +278,19 @@ func (cw *CodeWriter) WriteLabel(label string) error {
 	return nil
 }
 
+func (cw *CodeWriter) WriteGoto(label string) error {
+	output := joinASMStrings(
+		fmt.Sprintf("@%s", label),
+		"0;JMP",
+		"",
+	)
+	_, err := cw.outputFile.WriteString(output)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
 func (cw *CodeWriter) WriteIf(label string) error {
 	var output asmBuilder
 	outputList := []string{}

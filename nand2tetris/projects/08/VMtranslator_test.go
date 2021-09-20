@@ -109,6 +109,7 @@ func TestProgramFlow(t *testing.T) {
 	}{
 		// Program Flow tests from book
 		{"BasicLoop", "ProgramFlow/BasicLoop/BasicLoop.vm"},
+		{"FibonacciSeries", "ProgramFlow/FibonacciSeries/FibonacciSeries.vm"},
 	}
 
 	for _, test := range tests {
