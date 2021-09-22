@@ -28,6 +28,8 @@ func NewCodeWriter(outputFile *os.File) *CodeWriter {
 
 func (cw *CodeWriter) SetFileName(fileName string) {
 	cw.fileName = fileName
+	_, f := filepath.Split(cw.fileName)
+	cw.label = strings.Split(f, ".")[0]
 }
 
 const unsupportedCmdString = "Unsupported Command: "
