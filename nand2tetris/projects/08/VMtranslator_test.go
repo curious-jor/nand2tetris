@@ -135,3 +135,37 @@ func TestProgramFlow(t *testing.T) {
 		})
 	}
 }
+
+func TestFunctionCalls(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name  string
+		input string
+	}{
+		// Function Call tests from book
+		{"SimpleFunction", "FunctionCalls/SimpleFunction/SimpleFunction.vm"},
+	}
+
+	for _, test := range tests {
+		test := test
+		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
+			testScript := strings.Split(test.input, ".")[0] + ".tst"
+			err := translate(test.input)
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			runCPUEmulator := exec.Command("cmd", "/C", `..\..\tools\CPUEmulator.bat`, testScript)
+			output, err := runCPUEmulator.CombinedOutput()
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			successMsg := "End of script - Comparison ended successfully"
+			if strings.TrimSpace(string(output)) != successMsg {
+				t.Errorf("%s", output)
+			}
+		})
+	}
+}

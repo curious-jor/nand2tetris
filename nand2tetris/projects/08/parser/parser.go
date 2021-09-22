@@ -44,6 +44,7 @@ type Command struct {
 	arg2 int
 }
 
+var emptyArg1 = ""
 var emptyArg2 = -1
 
 type Parser struct {
@@ -202,7 +203,42 @@ func (p *Parser) Advance() error {
 					}
 					parsedCmd = &Command{ct: C_IF, arg1: label.Value, arg2: emptyArg2}
 				}
+			case "function":
+				{
+					// consume functionName
+					pos, functionName := p.lxr.NextToken()
+					p.fp = pos
+					if functionName.Token != lexer.ARG {
+						err = &ParserError{line: p.fp.Line, col: p.fp.Col, lxm: p.lexeme, msg: fmt.Sprintf("expected ARG token while parsing %q command but got %q)", p.lexeme.Value, functionName.Token.String())}
+					}
 
+					// consume numLocals
+					pos, numLocals := p.lxr.NextToken()
+					p.fp = pos
+					if functionName.Token != lexer.ARG {
+						err = &ParserError{line: p.fp.Line, col: p.fp.Col, lxm: p.lexeme, msg: fmt.Sprintf("expected ARG token while parsing %q command but got %q)", p.lexeme.Value, numLocals.Token.String())}
+					}
+
+					numLocalsInt, err := strconv.Atoi(numLocals.Value)
+					if err != nil {
+						parsedCmd = &Command{
+							ct:   C_FUNCTION,
+							arg1: functionName.Value,
+							arg2: emptyArg2,
+						}
+						return &ParserError{
+							line: p.fp.Line,
+							col:  p.fp.Col,
+							lxm:  p.lexeme,
+							msg:  fmt.Sprintf("could not convert %q to int while parsing \"function\" %s %s", numLocals.Value, functionName.Value, numLocals.Value),
+						}
+					}
+					parsedCmd = &Command{ct: C_FUNCTION, arg1: functionName.Value, arg2: numLocalsInt}
+				}
+			case "return":
+				{
+					parsedCmd = &Command{ct: C_RETURN, arg1: emptyArg1, arg2: emptyArg2}
+				}
 			default:
 				{
 					parsedCmd = nil

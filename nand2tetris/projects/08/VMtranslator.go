@@ -65,6 +65,14 @@ func translate(path string) error {
 		if ct == parser.C_GOTO {
 			codeWriter.WriteGoto(p.Arg1())
 		}
+
+		if ct == parser.C_FUNCTION {
+			codeWriter.WriteFunction(p.Arg1(), p.Arg2())
+		}
+
+		if ct == parser.C_RETURN {
+			codeWriter.WriteReturn()
+		}
 	}
 
 	if err := codeWriter.Close(); err != nil {

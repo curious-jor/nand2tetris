@@ -318,6 +318,96 @@ func (cw *CodeWriter) WriteIf(label string) error {
 	return nil
 }
 
+func (cw *CodeWriter) WriteReturn() error {
+	output := joinASMStrings(
+		"@LCL", // FRAME = LCL
+		"D=M",
+		"@FRAME",
+		"M=D",
+		"@5", // RET = *(FRAME-5)
+		"D=D-A",
+		"A=D",
+		"D=M",
+		"@RET",
+		"M=D",
+		stackPopString, // *ARG = pop()
+		"@ARG",
+		"A=M",
+		"M=D",
+		"@ARG", // SP = ARG + 1
+		"D=M+1",
+		"@SP",
+		"M=D",
+		"@FRAME", // THAT = *(FRAME-1)
+		"D=M-1",
+		"A=D",
+		"D=M",
+		"@THAT",
+		"M=D",
+		"@2", // THIS = *(FRAME-2)
+		"D=A",
+		"@FRAME",
+		"D=M-D",
+		"A=D",
+		"D=M",
+		"@THIS",
+		"M=D",
+		"@3", // ARG = *(FRAME-3)
+		"D=A",
+		"@FRAME",
+		"D=M-D",
+		"A=D",
+		"D=M",
+		"@ARG",
+		"M=D",
+		"@4", // LCL = *(FRAME-4)
+		"D=A",
+		"@FRAME",
+		"D=M-D",
+		"A=D",
+		"D=M",
+		"@LCL",
+		"M=D",
+		"@RET", // goto RET
+		"A=M",
+		"0;JMP",
+		"",
+	)
+
+	_, err := cw.outputFile.WriteString(output)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func (cw *CodeWriter) WriteFunction(functionName string, numLocals int) error {
+	if err := cw.WriteLabel(functionName); err != nil {
+		return err
+	}
+
+	var output asmBuilder
+
+	// initialize local variables to 0
+	for i := 0; i < numLocals; i++ {
+		initLCLVar := joinASMStrings(
+			"@SP",
+			"A=M",
+			"M=0",
+			incrementSPString,
+		)
+		if _, err := output.writeASMString(initLCLVar); err != nil {
+			return err
+		}
+	}
+
+	if _, err := cw.outputFile.WriteString(output.string()); err != nil {
+		return err
+	}
+
+	return nil
+}
+
 func (cw *CodeWriter) Close() error {
 	return cw.outputFile.Close()
 }
@@ -408,7 +498,6 @@ func (cw *CodeWriter) getUnaryCmdOutput(cmd string) string {
 	output = joinASMStrings(
 		loadArg,
 		stackPushString,
-		"\n",
 	)
 
 	return output
