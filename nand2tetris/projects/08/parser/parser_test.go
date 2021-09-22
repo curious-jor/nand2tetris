@@ -58,7 +58,6 @@ func TestAdvanceSimpleAdd(t *testing.T) {
 	if !expected.Equals(parser.cmd) {
 		t.Errorf("expected %v got %v", expected, parser.cmd)
 	}
-
 }
 
 func TestAdvanceStackTest(t *testing.T) {
@@ -85,7 +84,6 @@ func TestAdvanceStackTest(t *testing.T) {
 	if err := parser.Advance(); err == nil {
 		t.Errorf("expected non-nil error when advancing parser with no more commands")
 	}
-
 }
 
 func TestCommandType(t *testing.T) {
@@ -106,6 +104,11 @@ func TestCommandType(t *testing.T) {
 		{"not", &Command{ct: C_ARITHMETIC, arg1: "add"}, C_ARITHMETIC},
 		{"push", &Command{ct: C_PUSH, arg1: "constant", arg2: 7}, C_PUSH},
 		{"pop", &Command{ct: C_POP, arg1: "local", arg2: 1}, C_POP},
+		{"label", &Command{ct: C_LABEL, arg1: "LOOP_START", arg2: emptyArg2}, C_LABEL},
+		{"if-goto", &Command{ct: C_GOTO, arg1: "LOOP_START", arg2: emptyArg2}, C_GOTO},
+		{"call", &Command{ct: C_CALL, arg1: "Sys.init", arg2: 0}, C_CALL},
+		{"function", &Command{ct: C_FUNCTION, arg1: "Sys.init", arg2: 0}, C_FUNCTION},
+		{"return", &Command{ct: C_RETURN, arg1: emptyArg1, arg2: emptyArg2}, C_RETURN},
 		{"empty", nil, emptyCommandType},
 	}
 
@@ -118,7 +121,6 @@ func TestCommandType(t *testing.T) {
 			}
 		})
 	}
-
 }
 
 func TestArg1(t *testing.T) {
@@ -152,7 +154,6 @@ func TestArg1(t *testing.T) {
 			}
 		})
 	}
-
 }
 
 func TestArg2(t *testing.T) {
@@ -185,7 +186,6 @@ func TestArg2(t *testing.T) {
 			}
 		})
 	}
-
 }
 
 func TestParserReportsLineColNumsOnError(t *testing.T) {

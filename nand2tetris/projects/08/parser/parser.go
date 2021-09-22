@@ -203,6 +203,38 @@ func (p *Parser) Advance() error {
 					}
 					parsedCmd = &Command{ct: C_IF, arg1: label.Value, arg2: emptyArg2}
 				}
+			case "call":
+				{
+					// consume functionName
+					pos, functionName := p.lxr.NextToken()
+					p.fp = pos
+					if functionName.Token != lexer.ARG {
+						err = &ParserError{line: p.fp.Line, col: p.fp.Col, lxm: p.lexeme, msg: fmt.Sprintf("expected ARG token while parsing %q command but got %q)", p.lexeme.Value, functionName.Token.String())}
+					}
+
+					// consume numArgs
+					pos, numArgs := p.lxr.NextToken()
+					p.fp = pos
+					if functionName.Token != lexer.ARG {
+						err = &ParserError{line: p.fp.Line, col: p.fp.Col, lxm: p.lexeme, msg: fmt.Sprintf("expected ARG token while parsing %q command but got %q)", p.lexeme.Value, numArgs.Token.String())}
+					}
+
+					numArgsInt, err := strconv.Atoi(numArgs.Value)
+					if err != nil {
+						parsedCmd = &Command{
+							ct:   C_CALL,
+							arg1: functionName.Value,
+							arg2: emptyArg2,
+						}
+						return &ParserError{
+							line: p.fp.Line,
+							col:  p.fp.Col,
+							lxm:  p.lexeme,
+							msg:  fmt.Sprintf("could not convert %q to int while parsing \"function\" %s %s", numArgs.Value, functionName.Value, numArgs.Value),
+						}
+					}
+					parsedCmd = &Command{ct: C_CALL, arg1: functionName.Value, arg2: numArgsInt}
+				}
 			case "function":
 				{
 					// consume functionName
