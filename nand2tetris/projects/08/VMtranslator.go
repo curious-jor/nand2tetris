@@ -5,6 +5,7 @@ import (
 	"VMtranslator/parser"
 	"fmt"
 	"os"
+	"path/filepath"
 	"strings"
 )
 
@@ -23,62 +24,146 @@ func main() {
 }
 
 func translate(path string) error {
-	srcFile, err := os.Open(path)
+	fi, err := os.Stat(path)
 	if err != nil {
 		return err
 	}
-	defer srcFile.Close()
 
-	p := parser.NewParser(srcFile)
-	outputFilename := strings.Split(path, ".")[0] + ".asm"
-
-	outputFile, err := os.Create(outputFilename)
-	if err != nil {
-		panic(err)
-	}
-
-	codeWriter := codewriter.NewCodeWriter(outputFile)
-
-	for p.HasMoreCommands() {
-		err := p.Advance()
+	if !fi.IsDir() {
+		srcFile, err := os.Open(path)
 		if err != nil {
-			fmt.Println(err)
+			return err
+		}
+		defer srcFile.Close()
+
+		p := parser.NewParser(srcFile)
+
+		outputFilename := strings.Split(path, ".")[0] + ".asm"
+		outputFile, err := os.Create(outputFilename)
+		if err != nil {
+			panic(err)
+		}
+		fmt.Printf("%s is a file. Creating output: %s\n", path, path)
+
+		codeWriter := codewriter.NewCodeWriter(outputFile)
+
+		for p.HasMoreCommands() {
+			err := p.Advance()
+			if err != nil {
+				fmt.Println(err)
+			}
+
+			ct := p.CommandType()
+			if ct == parser.C_ARITHMETIC {
+				codeWriter.WriteArithmetic(p.Arg1())
+			}
+
+			if ct == parser.C_PUSH || ct == parser.C_POP {
+				codeWriter.WritePushPop(p.CommandType(), p.Arg1(), p.Arg2())
+			}
+
+			if ct == parser.C_IF {
+				codeWriter.WriteIf(p.Arg1())
+			}
+
+			if ct == parser.C_LABEL {
+				codeWriter.WriteLabel(p.Arg1())
+			}
+
+			if ct == parser.C_GOTO {
+				codeWriter.WriteGoto(p.Arg1())
+			}
+
+			if ct == parser.C_FUNCTION {
+				codeWriter.WriteFunction(p.Arg1(), p.Arg2())
+			}
+
+			if ct == parser.C_RETURN {
+				codeWriter.WriteReturn()
+			}
 		}
 
-		ct := p.CommandType()
-		if ct == parser.C_ARITHMETIC {
-			codeWriter.WriteArithmetic(p.Arg1())
+		if err := codeWriter.Close(); err != nil {
+			return err
 		}
+		fmt.Printf("Created output file: %s", outputFilename)
 
-		if ct == parser.C_PUSH || ct == parser.C_POP {
-			codeWriter.WritePushPop(p.CommandType(), p.Arg1(), p.Arg2())
-		}
-
-		if ct == parser.C_IF {
-			codeWriter.WriteIf(p.Arg1())
-		}
-
-		if ct == parser.C_LABEL {
-			codeWriter.WriteLabel(p.Arg1())
-		}
-
-		if ct == parser.C_GOTO {
-			codeWriter.WriteGoto(p.Arg1())
-		}
-
-		if ct == parser.C_FUNCTION {
-			codeWriter.WriteFunction(p.Arg1(), p.Arg2())
-		}
-
-		if ct == parser.C_RETURN {
-			codeWriter.WriteReturn()
-		}
 	}
 
-	if err := codeWriter.Close(); err != nil {
-		return err
+	if fi.IsDir() {
+		outputFilename := path + filepath.Base(path) + ".asm"
+		outputFile, err := os.Create(outputFilename)
+		if err != nil {
+			return err
+		}
+		cw := codewriter.NewCodeWriter(outputFile)
+
+		files, err := os.ReadDir(path)
+		if err != nil {
+			return err
+		}
+		fmt.Printf("%s is a directory\n", path)
+
+		for _, file := range files {
+			fname := file.Name()
+			if filepath.Ext(fname) == ".vm" {
+				fmt.Printf("Found vm file %s. Translating...\n", fname)
+				cw.SetFileName(fname)
+
+				f, err := os.Open(path + fname)
+				if err != nil {
+					return err
+				}
+
+				p := parser.NewParser(f)
+				for p.HasMoreCommands() {
+					err := p.Advance()
+					if err != nil {
+						fmt.Println(err)
+					}
+
+					ct := p.CommandType()
+					if ct == parser.C_ARITHMETIC {
+						cw.WriteArithmetic(p.Arg1())
+					}
+
+					if ct == parser.C_PUSH || ct == parser.C_POP {
+						cw.WritePushPop(p.CommandType(), p.Arg1(), p.Arg2())
+					}
+
+					if ct == parser.C_IF {
+						cw.WriteIf(p.Arg1())
+					}
+
+					if ct == parser.C_LABEL {
+						cw.WriteLabel(p.Arg1())
+					}
+
+					if ct == parser.C_GOTO {
+						cw.WriteGoto(p.Arg1())
+					}
+
+					if ct == parser.C_FUNCTION {
+						cw.WriteFunction(p.Arg1(), p.Arg2())
+					}
+
+					if ct == parser.C_RETURN {
+						cw.WriteReturn()
+					}
+				}
+
+				if err := f.Close(); err != nil {
+					return err
+				}
+			}
+		}
+
+		if err := cw.Close(); err != nil {
+			return err
+		}
+
+		fmt.Printf("Created output file: %s\n", outputFilename)
 	}
-	fmt.Printf("Created output file: %s", outputFilename)
 
 	return nil
 }
