@@ -33,7 +33,6 @@ func (cw *CodeWriter) SetFileName(fileName string) {
 }
 
 const unsupportedCmdString = "Unsupported Command: "
-const newLineString = "\n"
 
 // maps VM command names to their assembly equivalent
 var cmdsWithAsm = map[string]string{
@@ -53,30 +52,39 @@ var segmentsAsm = map[string]string{
 	"that":     "THAT",
 }
 
+var cmdMnemonics = map[parser.CommandType]string{
+	parser.C_PUSH: "push",
+	parser.C_POP:  "pop",
+}
+
 // assembly to push contents of D register onto stack
-var stackPushString = "@SP" + newLineString + "A=M" + newLineString + "M=D"
+var stackPushString = "@SP" + "\n\t" + "A=M" + "\n\t" + "M=D"
 
 // assembly to pop top of stack into D register
-var stackPopString = "@SP" + newLineString + "AM=M-1" + newLineString + "D=M"
+var stackPopString = "@SP" + "\n\t" + "AM=M-1" + "\n\t" + "D=M"
 
 // assembly to increment stack pointer (SP)
-var incrementSPString = "@SP" + newLineString + "M=M+1"
+var incrementSPString = "@SP" + "\n\t" + "M=M+1"
 
 // assembly to decrement stack pointer
-var decrementSPString = "@SP" + newLineString + "AM=M-1"
+var decrementSPString = "@SP" + "\n\t" + "AM=M-1"
 
 func (cw *CodeWriter) WriteArithmetic(command string) error {
-	var output asmBuilder
+	var output strings.Builder
 	outputList := []string{}
 	commandUnsupported := false
 
 	switch command {
 	case "add", "sub", "and", "or", "eq", "gt", "lt":
 		{
-			outputList = append(outputList, cw.getBinaryCmdOutput(command))
+			asm := cw.getBinaryCmdOutput(command)
 			if command == "eq" || command == "gt" || command == "lt" {
+				outputList = append(outputList, fmt.Sprintf("// %s %d", command, cw.eqCounter))
 				cw.eqCounter += 1
+			} else {
+				outputList = append(outputList, fmt.Sprintf("// %s", command))
 			}
+			outputList = append(outputList, asm)
 		}
 	case "neg", "not":
 		{
@@ -91,12 +99,12 @@ func (cw *CodeWriter) WriteArithmetic(command string) error {
 	outputList = append(outputList, incrementSPString)
 
 	for _, str := range outputList {
-		if _, err := output.writeASMString(str); err != nil {
+		if _, err := output.WriteString("\t" + str + "\n"); err != nil {
 			return err
 		}
 	}
 
-	_, err := cw.outputFile.WriteString(output.string())
+	_, err := cw.outputFile.WriteString(output.String())
 	if err != nil {
 		return err
 	}
@@ -113,43 +121,45 @@ func (cw *CodeWriter) WritePushPop(command parser.CommandType, segment string, i
 		return fmt.Errorf("attempted to write %s as push or pop command. expected C_PUSH or C_POP", command.String())
 	}
 
-	var output asmBuilder
+	var output strings.Builder
 	outputList := []string{}
 
+	outputList = append(outputList, fmt.Sprintf("// %s %s %d", cmdMnemonics[command], segment, index))
+
 	// The assembly to load a constant into data memory is shared by every push/pop command
-	loadIndex := joinASMStrings(
+	loadIndex := strings.Join([]string{
 		fmt.Sprintf("@%d", index),
 		"D=A",
-	)
+	}, "\n\t")
 
 	if command == parser.C_PUSH {
 		switch segment {
 		case "constant":
 			{
-				loadConstant := joinASMStrings(
+				loadConstant := strings.Join([]string{
 					loadIndex,
 					stackPushString,
-				)
+				}, "\n\t")
 				outputList = append(outputList, loadConstant)
 			}
 		case "local", "argument", "this", "that":
 			{
 				segmentName := segmentsAsm[segment]
-				loadIndexOfSegment := joinASMStrings(
+				loadIndexOfSegment := strings.Join([]string{
 					fmt.Sprintf("@%s", segmentName),
 					"A=D+M",
 					"D=M",
-				)
+				}, "\n\t")
 				push := stackPushString
 				outputList = append(outputList, loadIndex, loadIndexOfSegment, push)
 			}
 		case "temp":
 			{
-				loadIndexOfSegment := joinASMStrings(
+				loadIndexOfSegment := strings.Join([]string{
 					"@R5",
 					"A=D+A",
 					"D=M",
-				)
+				}, "\n\t")
 				push := stackPushString
 				outputList = append(outputList, loadIndex, loadIndexOfSegment, push)
 			}
@@ -162,20 +172,20 @@ func (cw *CodeWriter) WritePushPop(command parser.CommandType, segment string, i
 				if index == 1 {
 					entry = "THAT"
 				}
-				loadAddress := joinASMStrings(
+				loadAddress := strings.Join([]string{
 					fmt.Sprintf("@%s", entry),
 					"D=M",
-				)
+				}, "\n\t")
 				push := stackPushString
 				outputList = append(outputList, loadAddress, push)
 			}
 		case "static":
 			{
 				symbolCmd := fmt.Sprintf("@%s.%d", cw.label, index)
-				loadStatic := joinASMStrings(
+				loadStatic := strings.Join([]string{
 					symbolCmd,
 					"D=M",
-				)
+				}, "\n\t")
 				push := stackPushString
 				outputList = append(outputList, loadStatic, push)
 			}
@@ -188,38 +198,38 @@ func (cw *CodeWriter) WritePushPop(command parser.CommandType, segment string, i
 		case "local", "argument", "this", "that":
 			{
 				segmentName := segmentsAsm[segment]
-				loadIndexOfSegment := joinASMStrings(
+				loadIndexOfSegment := strings.Join([]string{
 					fmt.Sprintf("@%s", segmentName),
 					"D=D+M",
-				)
-				storeAddress := joinASMStrings(
+				}, "\n\t")
+				storeAddress := strings.Join([]string{
 					"@R13",
 					"M=D",
-				)
+				}, "\n\t")
 				popFromStack := stackPopString
-				push := joinASMStrings(
+				push := strings.Join([]string{
 					"@R13",
 					"A=M",
 					"M=D",
-				)
+				}, "\n\t")
 				outputList = append(outputList, loadIndex, loadIndexOfSegment, storeAddress, popFromStack, push)
 			}
 		case "temp":
 			{
-				loadIndexOfSegment := joinASMStrings(
+				loadIndexOfSegment := strings.Join([]string{
 					"@R5",
 					"D=D+A",
-				)
-				storeAddress := joinASMStrings(
+				}, "\n\t")
+				storeAddress := strings.Join([]string{
 					"@R13",
 					"M=D",
-				)
+				}, "\n\t")
 				popFromStack := stackPopString
-				push := joinASMStrings(
+				push := strings.Join([]string{
 					"@R13",
 					"A=M",
 					"M=D",
-				)
+				}, "\n\t")
 				outputList = append(outputList, loadIndex, loadIndexOfSegment, storeAddress, popFromStack, push)
 			}
 		case "pointer":
@@ -233,20 +243,20 @@ func (cw *CodeWriter) WritePushPop(command parser.CommandType, segment string, i
 				}
 
 				popFromStack := stackPopString
-				push := joinASMStrings(
+				push := strings.Join([]string{
 					fmt.Sprintf("@%s", entry),
 					"M=D",
-				)
+				}, "\n\t")
 				outputList = append(outputList, popFromStack, push)
 			}
 		case "static":
 			{
 				popFromStack := stackPopString
 				symbolCmd := fmt.Sprintf("@%s.%d", cw.label, index)
-				push := joinASMStrings(
+				push := strings.Join([]string{
 					symbolCmd,
 					"M=D",
-				)
+				}, "\n\t")
 				outputList = append(outputList, popFromStack, push)
 			}
 		case "constant":
@@ -255,12 +265,12 @@ func (cw *CodeWriter) WritePushPop(command parser.CommandType, segment string, i
 	}
 
 	for _, str := range outputList {
-		if _, err := output.writeASMString(str); err != nil {
+		if _, err := output.WriteString("\t" + str + "\n"); err != nil {
 			return err
 		}
 	}
 
-	_, err := cw.outputFile.WriteString(output.string())
+	_, err := cw.outputFile.WriteString(output.String())
 	if err != nil {
 		return err
 	}
@@ -269,23 +279,17 @@ func (cw *CodeWriter) WritePushPop(command parser.CommandType, segment string, i
 }
 
 func (cw *CodeWriter) WriteLabel(label string) error {
-	output := joinASMStrings(
-		fmt.Sprintf("(%s)", label),
-		"",
-	)
-	_, err := cw.outputFile.WriteString(output)
-	if err != nil {
+	output := fmt.Sprintf("(%s)\n", label)
+	if _, err := cw.outputFile.WriteString(output); err != nil {
 		return err
 	}
 	return nil
 }
 
 func (cw *CodeWriter) WriteGoto(label string) error {
-	output := joinASMStrings(
-		fmt.Sprintf("@%s", label),
+	output := strings.Join([]string{fmt.Sprintf("@%s", label),
 		"0;JMP",
-		"",
-	)
+		""}, "\n\t")
 	_, err := cw.outputFile.WriteString(output)
 	if err != nil {
 		return err
@@ -294,26 +298,27 @@ func (cw *CodeWriter) WriteGoto(label string) error {
 }
 
 func (cw *CodeWriter) WriteIf(label string) error {
-	var output asmBuilder
+	var output strings.Builder
 	outputList := []string{}
 
 	outputList = append(outputList, stackPopString)
 
 	loadLabel := fmt.Sprintf("@%s", label)
-	jump := joinASMStrings(
+	jump := strings.Join([]string{
 		loadLabel,
 		"D;JNE",
-	)
+		"",
+	}, "\n\t")
 
 	outputList = append(outputList, jump)
 
 	for _, str := range outputList {
-		if _, err := output.writeASMString(str); err != nil {
+		if _, err := output.WriteString("\n\t" + str); err != nil {
 			return err
 		}
 	}
 
-	_, err := cw.outputFile.WriteString(output.string())
+	_, err := cw.outputFile.WriteString(output.String())
 	if err != nil {
 		return err
 	}
@@ -321,7 +326,8 @@ func (cw *CodeWriter) WriteIf(label string) error {
 }
 
 func (cw *CodeWriter) WriteReturn() error {
-	output := joinASMStrings(
+	output := strings.Join([]string{
+		"// return",
 		"@LCL", // FRAME = LCL
 		"D=M",
 		"@FRAME",
@@ -373,10 +379,9 @@ func (cw *CodeWriter) WriteReturn() error {
 		"@RET", // goto RET
 		"A=M",
 		"0;JMP",
-		"",
-	)
+	}, "\n\t")
 
-	_, err := cw.outputFile.WriteString(output)
+	_, err := cw.outputFile.WriteString("\t" + output + "\n")
 	if err != nil {
 		return err
 	}
@@ -384,26 +389,29 @@ func (cw *CodeWriter) WriteReturn() error {
 }
 
 func (cw *CodeWriter) WriteFunction(functionName string, numLocals int) error {
+	if _, err := cw.outputFile.WriteString(fmt.Sprintf("// function %s %d\n", functionName, numLocals)); err != nil {
+		return err
+	}
 	if err := cw.WriteLabel(functionName); err != nil {
 		return err
 	}
 
-	var output asmBuilder
+	var output strings.Builder
 
 	// initialize local variables to 0
 	for i := 0; i < numLocals; i++ {
-		initLCLVar := joinASMStrings(
+		initLCLVar := strings.Join([]string{
 			"@SP",
 			"A=M",
 			"M=0",
 			incrementSPString,
-		)
-		if _, err := output.writeASMString(initLCLVar); err != nil {
+		}, "\n\t")
+		if _, err := output.WriteString("\t" + initLCLVar + "\n"); err != nil {
 			return err
 		}
 	}
 
-	if _, err := cw.outputFile.WriteString(output.string()); err != nil {
+	if _, err := cw.outputFile.WriteString(output.String()); err != nil {
 		return err
 	}
 
@@ -421,21 +429,15 @@ func (cw *CodeWriter) getBinaryCmdOutput(cmd string) string {
 	case "add", "sub", "and", "or":
 		{
 			computeInstruction := cmdsWithAsm[cmd]
-			loadArg1 := joinASMStrings(
+			output = strings.Join([]string{
+				// loadArg1
 				decrementSPString,
 				"D=M",
-			)
-			loadArg2 := joinASMStrings(
+				// loadArg2
 				decrementSPString,
 				computeInstruction,
-			)
-
-			asm := joinASMStrings(
-				loadArg1,
-				loadArg2,
 				stackPushString,
-			)
-			output = asm
+			}, "\n\t")
 		}
 	case "eq", "gt", "lt": // all three equality checks use the same logic, but different jump mnemonics
 		{
@@ -450,18 +452,15 @@ func (cw *CodeWriter) getBinaryCmdOutput(cmd string) string {
 				jumpMnemonic = "JLT"
 			}
 
-			loadArg1 := joinASMStrings(
+			output = strings.Join([]string{
+				// loadArg1
 				decrementSPString,
 				"D=M",
-			)
-			loadArg2 := joinASMStrings(
+				// loadArg2
 				decrementSPString,
 				"D=M-D",
-			)
-
-			// Create a unique label branch for each instance of equality command encountered in
-			// the file(s)
-			checkEquality := joinASMStrings(
+				// Create a unique label branch for each instance of equality command encountered in
+				// the file(s)
 				fmt.Sprintf("@EQ%d", cw.eqCounter),
 				fmt.Sprintf("D;%s", jumpMnemonic),
 				"D=0",
@@ -469,20 +468,12 @@ func (cw *CodeWriter) getBinaryCmdOutput(cmd string) string {
 				"0;JMP",
 				fmt.Sprintf("(EQ%d)", cw.eqCounter),
 				"D=-1",
-			)
-			pushResult := joinASMStrings(
+				// pushResult
 				fmt.Sprintf("(PUSHEQ%d)", cw.eqCounter),
 				"@SP",
 				"A=M",
 				"M=D",
-			)
-			asm := joinASMStrings(
-				loadArg1,
-				loadArg2,
-				checkEquality,
-				pushResult,
-			)
-			output = asm
+			}, "\n\t")
 		}
 	}
 
@@ -490,37 +481,12 @@ func (cw *CodeWriter) getBinaryCmdOutput(cmd string) string {
 }
 
 func (cw *CodeWriter) getUnaryCmdOutput(cmd string) string {
-	var output string
-
 	computeInstruction := cmdsWithAsm[cmd]
-	loadArg := joinASMStrings(
+	output := strings.Join([]string{
 		decrementSPString,
 		computeInstruction,
-	)
-	output = joinASMStrings(
-		loadArg,
 		stackPushString,
-	)
+	}, "\n\t")
 
 	return output
-}
-
-// Wraps strings.Builder so we can add newline characters automatically when building string output
-type asmBuilder struct {
-	b strings.Builder
-}
-
-func (ab *asmBuilder) writeASMString(s string) (int, error) {
-	return ab.b.WriteString(s + newLineString)
-}
-
-func (ab *asmBuilder) string() string {
-	return ab.b.String()
-}
-
-// Makes it explicit that we're joining together assembly output. Adds newline characters automatically.
-func joinASMStrings(strs ...string) string {
-	strList := []string{}
-	strList = append(strList, strs...)
-	return strings.Join(strList, "\n")
 }
