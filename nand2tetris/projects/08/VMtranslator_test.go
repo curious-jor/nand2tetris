@@ -146,6 +146,7 @@ func TestFunctionCalls(t *testing.T) {
 		{"SimpleFunction", "FunctionCalls/SimpleFunction/SimpleFunction.vm"},
 		{"NestedCall", "FunctionCalls/NestedCall/"},
 		{"FibonacciElement", "FunctionCalls/FibonacciElement/"},
+		{"StaticsTest", "FunctionCalls/StaticsTest/"},
 	}
 
 	for _, test := range tests {
