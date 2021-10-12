@@ -326,6 +326,22 @@ func (cw *CodeWriter) WriteIf(label string) error {
 	return nil
 }
 
+func (cw *CodeWriter) WriteInit() error {
+	initSP := strings.Join([]string{
+		"// Initialize the stack pointer to 0x0100",
+		"@256",
+		"D=A",
+		"@SP",
+		"M=D",
+		"// Start executing the translated code of Sys.init",
+	}, "\n\t")
+	if _, err := cw.outputFile.WriteString("\t" + initSP + "\n"); err != nil {
+		return err
+	}
+
+	return cw.WriteCall("Sys.init", 0)
+}
+
 func (cw *CodeWriter) WriteCall(functionName string, numArgs int) error {
 	output := strings.Join([]string{
 		fmt.Sprintf("// call %s %d", functionName, numArgs),

@@ -145,6 +145,7 @@ func TestFunctionCalls(t *testing.T) {
 		// Function Call tests from book
 		{"SimpleFunction", "FunctionCalls/SimpleFunction/SimpleFunction.vm"},
 		{"NestedCall", "FunctionCalls/NestedCall/"},
+		{"FibonacciElement", "FunctionCalls/FibonacciElement/"},
 	}
 
 	for _, test := range tests {

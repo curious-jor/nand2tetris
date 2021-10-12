@@ -118,6 +118,7 @@ func translate(path string) error {
 				if err != nil {
 					return err
 				}
+				cw.WriteInit()
 
 				p := parser.NewParser(f)
 				for p.HasMoreCommands() {
