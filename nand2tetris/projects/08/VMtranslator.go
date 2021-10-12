@@ -54,35 +54,29 @@ func translate(path string) error {
 			}
 
 			ct := p.CommandType()
-			if ct == parser.C_ARITHMETIC {
+			switch ct {
+			case parser.C_ARITHMETIC:
 				codeWriter.WriteArithmetic(p.Arg1())
-			}
 
-			if ct == parser.C_PUSH || ct == parser.C_POP {
+			case parser.C_PUSH, parser.C_POP:
 				codeWriter.WritePushPop(p.CommandType(), p.Arg1(), p.Arg2())
-			}
 
-			if ct == parser.C_IF {
+			case parser.C_IF:
 				codeWriter.WriteIf(p.Arg1())
-			}
 
-			if ct == parser.C_LABEL {
+			case parser.C_LABEL:
 				codeWriter.WriteLabel(p.Arg1())
-			}
 
-			if ct == parser.C_GOTO {
+			case parser.C_GOTO:
 				codeWriter.WriteGoto(p.Arg1())
-			}
 
-			if ct == parser.C_CALL {
+			case parser.C_CALL:
 				codeWriter.WriteCall(p.Arg1(), p.Arg2())
-			}
 
-			if ct == parser.C_FUNCTION {
+			case parser.C_FUNCTION:
 				codeWriter.WriteFunction(p.Arg1(), p.Arg2())
-			}
 
-			if ct == parser.C_RETURN {
+			case parser.C_RETURN:
 				codeWriter.WriteReturn()
 			}
 		}
@@ -90,8 +84,7 @@ func translate(path string) error {
 		if err := codeWriter.Close(); err != nil {
 			return err
 		}
-		fmt.Printf("Created output file: %s", outputFilename)
-
+		fmt.Printf("Created output file: %s\n", outputFilename)
 	}
 
 	if fi.IsDir() {
@@ -128,35 +121,29 @@ func translate(path string) error {
 					}
 
 					ct := p.CommandType()
-					if ct == parser.C_ARITHMETIC {
+					switch ct {
+					case parser.C_ARITHMETIC:
 						cw.WriteArithmetic(p.Arg1())
-					}
 
-					if ct == parser.C_PUSH || ct == parser.C_POP {
+					case parser.C_PUSH, parser.C_POP:
 						cw.WritePushPop(p.CommandType(), p.Arg1(), p.Arg2())
-					}
 
-					if ct == parser.C_IF {
+					case parser.C_IF:
 						cw.WriteIf(p.Arg1())
-					}
 
-					if ct == parser.C_LABEL {
+					case parser.C_LABEL:
 						cw.WriteLabel(p.Arg1())
-					}
 
-					if ct == parser.C_GOTO {
+					case parser.C_GOTO:
 						cw.WriteGoto(p.Arg1())
-					}
 
-					if ct == parser.C_FUNCTION {
+					case parser.C_FUNCTION:
 						cw.WriteFunction(p.Arg1(), p.Arg2())
-					}
 
-					if ct == parser.C_CALL {
+					case parser.C_CALL:
 						cw.WriteCall(p.Arg1(), p.Arg2())
-					}
 
-					if ct == parser.C_RETURN {
+					case parser.C_RETURN:
 						cw.WriteReturn()
 					}
 				}
