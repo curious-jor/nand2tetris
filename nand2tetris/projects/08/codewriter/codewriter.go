@@ -299,27 +299,15 @@ func (cw *CodeWriter) WriteGoto(label string) error {
 }
 
 func (cw *CodeWriter) WriteIf(label string) error {
-	var output strings.Builder
-	outputList := []string{}
-
-	outputList = append(outputList, stackPopString)
-
-	loadLabel := fmt.Sprintf("@%s", label)
-	jump := strings.Join([]string{
-		loadLabel,
+	output := strings.Join([]string{
+		fmt.Sprintf("// if-goto %s", label),
+		stackPopString,
+		// load label
+		fmt.Sprintf("@%s", label),
 		"D;JNE",
-		"",
 	}, "\n\t")
 
-	outputList = append(outputList, jump)
-
-	for _, str := range outputList {
-		if _, err := output.WriteString("\n\t" + str); err != nil {
-			return err
-		}
-	}
-
-	_, err := cw.outputFile.WriteString(output.String())
+	_, err := cw.outputFile.WriteString("\t" + output + "\n")
 	if err != nil {
 		return err
 	}
