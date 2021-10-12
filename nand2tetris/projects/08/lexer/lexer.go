@@ -84,7 +84,7 @@ func isDigit(ch rune) bool {
 }
 
 func isSymbolChar(ch rune) bool {
-	return ch == '.' || ch == '#' || ch == '_' || ch == '-' || ch == ':'
+	return ch == '.' || ch == '#' || ch == '_' || ch == '-' || ch == ':' || ch == '$'
 }
 
 type Lexeme struct {

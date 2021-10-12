@@ -14,12 +14,14 @@ type CodeWriter struct {
 	fileName   string // name of the file currently being translated
 	label      string // used as a prefix in the naming of static variables encountered in the file
 	retCounter int
+	currFnName string
 }
 
 func NewCodeWriter(outputFile *os.File) *CodeWriter {
 	var cw = new(CodeWriter)
 	cw.outputFile = outputFile
 	cw.eqCounter = 1
+	cw.retCounter = 1
 	cw.fileName = outputFile.Name()
 
 	_, f := filepath.Split(cw.fileName)
@@ -29,6 +31,9 @@ func NewCodeWriter(outputFile *os.File) *CodeWriter {
 
 func (cw *CodeWriter) SetFileName(fileName string) {
 	cw.fileName = fileName
+	cw.currFnName = ""
+	cw.eqCounter = 1
+	cw.retCounter = 1
 	_, f := filepath.Split(cw.fileName)
 	cw.label = strings.Split(f, ".")[0]
 }
@@ -280,7 +285,19 @@ func (cw *CodeWriter) WritePushPop(command parser.CommandType, segment string, i
 }
 
 func (cw *CodeWriter) WriteLabel(label string) error {
-	output := fmt.Sprintf("(%s)\n", label)
+	var output string
+	var labelGen string
+	if cw.currFnName != "" {
+		labelGen = fmt.Sprintf("(%s$%s)", cw.currFnName, label)
+	} else {
+		labelGen = fmt.Sprintf("(%s)", label)
+	}
+
+	output = strings.Join([]string{
+		fmt.Sprintf("// label %s", labelGen),
+		labelGen,
+	}, "\n\t")
+
 	if _, err := cw.outputFile.WriteString(output); err != nil {
 		return err
 	}
@@ -288,7 +305,15 @@ func (cw *CodeWriter) WriteLabel(label string) error {
 }
 
 func (cw *CodeWriter) WriteGoto(label string) error {
-	output := strings.Join([]string{fmt.Sprintf("@%s", label),
+	var loadLabel string
+	if cw.currFnName != "" {
+		loadLabel = fmt.Sprintf("@%s$%s", cw.currFnName, label)
+	} else {
+		loadLabel = fmt.Sprintf("@%s", label)
+	}
+	output := strings.Join([]string{
+		fmt.Sprintf("// goto %s", label),
+		loadLabel,
 		"0;JMP",
 		""}, "\n\t")
 	_, err := cw.outputFile.WriteString(output)
@@ -299,11 +324,17 @@ func (cw *CodeWriter) WriteGoto(label string) error {
 }
 
 func (cw *CodeWriter) WriteIf(label string) error {
+	var loadLabel string
+	if cw.currFnName != "" {
+		loadLabel = fmt.Sprintf("@%s$%s", cw.currFnName, label)
+	} else {
+		loadLabel = fmt.Sprintf("@%s", label)
+	}
 	output := strings.Join([]string{
 		fmt.Sprintf("// if-goto %s", label),
 		stackPopString,
 		// load label
-		fmt.Sprintf("@%s", label),
+		loadLabel,
 		"D;JNE",
 	}, "\n\t")
 
@@ -326,16 +357,22 @@ func (cw *CodeWriter) WriteInit() error {
 	if _, err := cw.outputFile.WriteString("\t" + initSP + "\n"); err != nil {
 		return err
 	}
-
+	cw.currFnName = "Sys.init"
 	return cw.WriteCall("Sys.init", 0)
 }
 
 func (cw *CodeWriter) WriteCall(functionName string, numArgs int) error {
+	var retAddrLabel string
+	if cw.currFnName != "" {
+		retAddrLabel = fmt.Sprintf("%s$ret.%d", cw.currFnName, cw.retCounter)
+	} else {
+		retAddrLabel = fmt.Sprintf("ret.%d", cw.retCounter)
+	}
 	output := strings.Join([]string{
 		fmt.Sprintf("// call %s %d", functionName, numArgs),
 		// push return-address
 		fmt.Sprintf("// push RET%d", cw.retCounter),
-		fmt.Sprintf("@RET%d", cw.retCounter),
+		fmt.Sprintf("@%s", retAddrLabel),
 		"D=A",
 		stackPushString,
 		incrementSPString,
@@ -383,7 +420,7 @@ func (cw *CodeWriter) WriteCall(functionName string, numArgs int) error {
 		fmt.Sprintf("// goto %s", functionName),
 		fmt.Sprintf("@%s", functionName),
 		"0;JMP",
-		fmt.Sprintf("(RET%d)", cw.retCounter),
+		fmt.Sprintf("(%s)", retAddrLabel),
 	}, "\n\t")
 	cw.retCounter += 1
 
@@ -461,9 +498,12 @@ func (cw *CodeWriter) WriteFunction(functionName string, numLocals int) error {
 	if _, err := cw.outputFile.WriteString(fmt.Sprintf("// function %s %d\n", functionName, numLocals)); err != nil {
 		return err
 	}
-	if err := cw.WriteLabel(functionName); err != nil {
+	if _, err := cw.outputFile.WriteString(fmt.Sprintf("(%s)\n", functionName)); err != nil {
 		return err
 	}
+	cw.currFnName = functionName
+	cw.retCounter = 1
+	cw.eqCounter = 1
 
 	var output strings.Builder
 
