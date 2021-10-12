@@ -43,7 +43,7 @@ func translate(path string) error {
 		if err != nil {
 			panic(err)
 		}
-		fmt.Printf("%s is a file. Creating output: %s\n", path, path)
+		fmt.Printf("%s is a file.\nCreating output: %s\n", path, path)
 
 		codeWriter := codewriter.NewCodeWriter(outputFile)
 
@@ -72,6 +72,10 @@ func translate(path string) error {
 
 			if ct == parser.C_GOTO {
 				codeWriter.WriteGoto(p.Arg1())
+			}
+
+			if ct == parser.C_CALL {
+				codeWriter.WriteCall(p.Arg1(), p.Arg2())
 			}
 
 			if ct == parser.C_FUNCTION {
@@ -145,6 +149,10 @@ func translate(path string) error {
 
 					if ct == parser.C_FUNCTION {
 						cw.WriteFunction(p.Arg1(), p.Arg2())
+					}
+
+					if ct == parser.C_CALL {
+						cw.WriteCall(p.Arg1(), p.Arg2())
 					}
 
 					if ct == parser.C_RETURN {

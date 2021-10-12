@@ -13,6 +13,7 @@ type CodeWriter struct {
 	eqCounter  int    // used to make unique label assembly commands for each vm equality command
 	fileName   string // name of the file currently being translated
 	label      string // used as a prefix in the naming of static variables encountered in the file
+	retCounter int
 }
 
 func NewCodeWriter(outputFile *os.File) *CodeWriter {
@@ -319,6 +320,70 @@ func (cw *CodeWriter) WriteIf(label string) error {
 	}
 
 	_, err := cw.outputFile.WriteString(output.String())
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func (cw *CodeWriter) WriteCall(functionName string, numArgs int) error {
+	output := strings.Join([]string{
+		fmt.Sprintf("// call %s %d", functionName, numArgs),
+		// push return-address
+		fmt.Sprintf("// push RET%d", cw.retCounter),
+		fmt.Sprintf("@RET%d", cw.retCounter),
+		"D=A",
+		stackPushString,
+		incrementSPString,
+		// push LCL
+		"// push LCL",
+		"@LCL",
+		"D=M",
+		stackPushString,
+		incrementSPString,
+		// push ARG
+		"// push ARG",
+		"@ARG",
+		"D=M",
+		stackPushString,
+		incrementSPString,
+		// push THIS
+		"// push THIS",
+		"@THIS",
+		"D=M",
+		stackPushString,
+		incrementSPString,
+		// push THAT
+		"// push THAT",
+		"@THAT",
+		"D=M",
+		stackPushString,
+		incrementSPString,
+		// ARG = SP-n-5
+		"// ARG = SP-n-5",
+		"@SP",
+		"D=M",
+		fmt.Sprintf("@%d", numArgs),
+		"D=D-A",
+		"@5",
+		"D=D-A",
+		"@ARG",
+		"M=D",
+		// LCL = SP
+		"// LCL = SP",
+		"@SP",
+		"D=M",
+		"@LCL",
+		"M=D",
+		// goto f
+		fmt.Sprintf("// goto %s", functionName),
+		fmt.Sprintf("@%s", functionName),
+		"0;JMP",
+		fmt.Sprintf("(RET%d)", cw.retCounter),
+	}, "\n\t")
+	cw.retCounter += 1
+
+	_, err := cw.outputFile.WriteString("\t" + output + "\n")
 	if err != nil {
 		return err
 	}

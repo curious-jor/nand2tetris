@@ -144,13 +144,22 @@ func TestFunctionCalls(t *testing.T) {
 	}{
 		// Function Call tests from book
 		{"SimpleFunction", "FunctionCalls/SimpleFunction/SimpleFunction.vm"},
+		{"NestedCall", "FunctionCalls/NestedCall/"},
 	}
 
 	for _, test := range tests {
 		test := test
 		t.Run(test.name, func(t *testing.T) {
 			t.Parallel()
-			testScript := strings.Split(test.input, ".")[0] + ".tst"
+			var testScript string
+			if fi, err := os.Stat(test.input); fi.IsDir() {
+				testScript = test.input + test.name + ".tst"
+			} else if err == nil {
+				testScript = strings.Split(test.input, ".")[0] + ".tst"
+			} else {
+				t.Fatal(err)
+			}
+
 			err := translate(test.input)
 			if err != nil {
 				t.Fatal(err)
