@@ -6,6 +6,5 @@ demo
 *.exe
 *.code-workspace
 *.test
-tools
 
 !*Compare.hack
