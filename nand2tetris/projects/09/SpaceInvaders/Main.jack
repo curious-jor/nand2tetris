@@ -1,0 +1,18 @@
+class Main {
+    function void main() {
+        // Draw ship
+        var int xMax, yMax, xHalf, yHalf, shipWidth, shipHeight;
+        let xMax = 511;
+        let yMax = 255;
+        let xHalf = xMax / 2;
+        let shipWidth = 26;
+        let shipHeight = 16;
+        // ship base
+        do Screen.drawRectangle(xHalf - (shipWidth / 2), yMax - 10, xHalf + (shipWidth / 2), yMax);
+        // ship mid layer
+        do Screen.drawRectangle(xHalf - (shipWidth / 2) + 2, yMax - 10 - 2, xHalf + (shipWidth / 2) - 2, yMax - 10);
+        // ship top
+        do Screen.drawRectangle(xHalf - (shipWidth / 2) + 10, yMax - 16, xHalf + (shipWidth / 2) - 10, yMax - 12);
+        return;
+    }
+}
