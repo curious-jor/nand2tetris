@@ -1,0 +1,39 @@
+class Player {
+    field int x, y; // the screen location of the player's ship. Used as the top-left corner from which to calculate the ship's coordinates
+
+    constructor Player new(int Ax, int Ay) {
+        let x = Ax;
+        let y = Ay;
+        do draw();
+        return this;
+    }
+
+    method void dispose() {
+        do Memory.deAlloc(this);
+        return;
+    }
+
+    method void draw() {
+        var int shipTopXStart, shipTopYStart, shipTopLen, shipTopWidth, shipMidXStart, shipMidYStart, shipMidLen, shipMidWidth, shipBaseXStart, shipBaseYStart, shipBaseLen, shipBaseWidth;
+        let shipTopXStart = 10;
+        let shipTopYStart = 0;
+        let shipTopLen = 6;
+        let shipTopWidth = 4;
+        let shipMidXStart = 2;
+        let shipMidYStart = 4;
+        let shipMidLen = 22;
+        let shipMidWidth = 2;
+        let shipBaseXStart = 0;
+        let shipBaseYStart = 6;
+        let shipBaseLen = 26;
+        let shipBaseWidth = 10;
+        do Screen.setColor(true);
+        // ship top
+        do Screen.drawRectangle(x + shipTopXStart, y + shipTopYStart, x + shipTopXStart + shipTopLen, y + shipTopYStart + shipTopWidth);
+        // // ship mid layer
+        do Screen.drawRectangle(x + shipMidXStart, y + shipMidYStart, x + shipMidXStart + shipMidLen, y + shipMidYStart + shipMidWidth);
+        // // ship base
+        do Screen.drawRectangle(x + shipBaseXStart, y + shipBaseYStart, x + shipBaseXStart + shipBaseLen, y + shipBaseYStart + shipBaseWidth);
+        return;
+    }
+}
