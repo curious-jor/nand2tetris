@@ -1,20 +1,13 @@
 class Player {
     field int x, y; // the screen location of the player's ship. Used as the top-left corner from which to calculate the ship's coordinates
+    field int shipTopXStart, shipTopYStart, shipTopLen, shipTopWidth; 
+    field int shipMidXStart, shipMidYStart, shipMidLen, shipMidWidth;
+    field int shipBaseXStart, shipBaseYStart, shipBaseLen, shipBaseWidth;
+    field int moveDist; // number of pixels per movement
 
     constructor Player new(int Ax, int Ay) {
         let x = Ax;
         let y = Ay;
-        do draw();
-        return this;
-    }
-
-    method void dispose() {
-        do Memory.deAlloc(this);
-        return;
-    }
-
-    method void draw() {
-        var int shipTopXStart, shipTopYStart, shipTopLen, shipTopWidth, shipMidXStart, shipMidYStart, shipMidLen, shipMidWidth, shipBaseXStart, shipBaseYStart, shipBaseLen, shipBaseWidth;
         let shipTopXStart = 10;
         let shipTopYStart = 0;
         let shipTopLen = 6;
@@ -27,6 +20,17 @@ class Player {
         let shipBaseYStart = 6;
         let shipBaseLen = 26;
         let shipBaseWidth = 10;
+        let moveDist = 2;
+        return this;
+    }
+
+    method void dispose() {
+        do Memory.deAlloc(this);
+        return;
+    }
+
+    /* Draw the player ship on the screen */
+    method void draw() {
         do Screen.setColor(true);
         // ship top
         do Screen.drawRectangle(x + shipTopXStart, y + shipTopYStart, x + shipTopXStart + shipTopLen, y + shipTopYStart + shipTopWidth);
@@ -34,6 +38,34 @@ class Player {
         do Screen.drawRectangle(x + shipMidXStart, y + shipMidYStart, x + shipMidXStart + shipMidLen, y + shipMidYStart + shipMidWidth);
         // // ship base
         do Screen.drawRectangle(x + shipBaseXStart, y + shipBaseYStart, x + shipBaseXStart + shipBaseLen, y + shipBaseYStart + shipBaseWidth);
+        return;
+    }
+
+    method void erase() {
+        do Screen.setColor(false);
+        do Screen.drawRectangle(x + shipTopXStart, y + shipTopYStart, x + shipTopXStart + shipTopLen, y + shipTopYStart + shipTopWidth);
+        // // ship mid layer
+        do Screen.drawRectangle(x + shipMidXStart, y + shipMidYStart, x + shipMidXStart + shipMidLen, y + shipMidYStart + shipMidWidth);
+        // // ship base
+        do Screen.drawRectangle(x + shipBaseXStart, y + shipBaseYStart, x + shipBaseXStart + shipBaseLen, y + shipBaseYStart + shipBaseWidth);
+        return;
+    }
+
+    method void moveLeft() {
+        if (x > 1) {
+            do erase();
+            let x = x - moveDist;
+            do draw();
+        }
+        return;
+    }
+
+    method void moveRight() {
+        if (x < (511 - shipBaseLen - moveDist)) {
+            do erase();
+            let x = x + moveDist;
+            do draw();
+        }
         return;
     }
 }

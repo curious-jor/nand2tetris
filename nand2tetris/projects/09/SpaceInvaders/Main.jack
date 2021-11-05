@@ -2,12 +2,34 @@ class Main {
     function void main() {
         // Draw ship
         var int xMax, yMax, xHalf, yHalf;
-        var Player player; 
+        var Player player;
+        var char key;
+        var boolean exit;
+
         let xMax = 511;
         let yMax = 255;
         let xHalf = xMax / 2;
         let player = Player.new(xHalf - 13, yMax - 16);
         do player.draw();
+
+        let exit = false;
+        while (~exit) {
+            // waits for a key to be pressed
+            while (key = 0) {
+                let key = Keyboard.keyPressed();
+                if (key = 130) { do player.moveLeft();}   // left arrow
+                if (key = 132) { do player.moveRight(); }   // right arrow
+                do Sys.wait(4);
+            }
+            if (key = 81)  { let exit = true; }     // q key
+            while (~(key = 0)) {
+                let key = Keyboard.keyPressed();
+                if (key = 130) { do player.moveLeft();}   // left arrow
+                if (key = 132) { do player.moveRight(); }   // right arrow
+                do Sys.wait(4);
+             }
+        } // while
+
         do player.dispose();
         return;
     }
