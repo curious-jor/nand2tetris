@@ -3,6 +3,7 @@ class Player {
     field int shipTopXStart, shipTopYStart, shipTopLen, shipTopWidth; 
     field int shipMidXStart, shipMidYStart, shipMidLen, shipMidWidth;
     field int shipBaseXStart, shipBaseYStart, shipBaseLen, shipBaseWidth;
+    field int totalHeight;
     field int moveDist; // number of pixels per movement
 
     constructor Player new(int Ax, int Ay) {
@@ -20,6 +21,7 @@ class Player {
         let shipBaseYStart = 6;
         let shipBaseLen = 26;
         let shipBaseWidth = 10;
+        let totalHeight = shipTopWidth + shipMidWidth + shipBaseWidth;
         let moveDist = 2;
         return this;
     }
@@ -67,5 +69,20 @@ class Player {
             do draw();
         }
         return;
+    }
+
+    method int getX() {
+        return x;
+    }
+
+    method int getY() {
+        return y;
+    }
+
+    method int getShipTopLeft() {
+        return x + shipTopXStart;
+    }
+    method int getShipTotalHeight() {
+        return totalHeight;
     }
 }
