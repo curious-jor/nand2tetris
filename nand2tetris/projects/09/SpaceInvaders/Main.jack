@@ -9,7 +9,7 @@ class Main {
         let xMax = 511;
         let yMax = 255;
         let xHalf = xMax / 2;
-        let player = Player.new(xHalf - 13, yMax - 16);
+        let player = Player.new(xHalf - 13, yMax - 18);
         do player.draw();
 
         let exit = false;
