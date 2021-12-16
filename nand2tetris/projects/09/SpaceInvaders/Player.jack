@@ -1,14 +1,19 @@
 class Player {
-    field int x, y; // the screen location of the player's ship. Used as the bottom-left corner from which to calculate the ship's coordinates
-    field int shipBaseWidth, shipBaseHeight;
+    field int x, y; // the screen location of the player's ship. Used as the top-left corner.
+    field int shipGunXStart, shipGunYStart, shipGunWidth, shipGunHeight;
+    field int shipBaseWidth;
     field int moveDist;
 
     constructor Player new(int Ax, int Ay) {
         let x = Ax;
         let y = Ay;
-        let shipBaseWidth = 26;
-        let shipBaseHeight = 10;
+
+        let shipGunXStart = 12;
+        let shipGunYStart = 0;
+        let shipGunWidth = 4;
+        let shipGunHeight = 2;
         
+        let shipBaseWidth = 26;
         let moveDist = 2;
         return this;
     }
@@ -21,14 +26,13 @@ class Player {
     /* Draw the player ship on the screen */
     method void draw() {
         do Screen.setColor(true);
-        // // ship base
-        do Screen.drawRectangle(x, y, x + shipBaseWidth, y + shipBaseHeight);
+        do Screen.drawRectangle(x + shipGunXStart, y + shipGunYStart, x + shipGunXStart + shipGunWidth, y + shipGunYStart + shipGunHeight);
         return;
     }
 
     method void erase() {
         do Screen.setColor(false);
-        do Screen.drawRectangle(x, y, x + shipBaseWidth, y + shipBaseHeight);
+        do Screen.drawRectangle(x + shipGunXStart, y + shipGunYStart, x + shipGunXStart + shipGunWidth, y + shipGunYStart + shipGunHeight);
         return;
     }
 
