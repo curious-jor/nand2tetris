@@ -3,7 +3,7 @@ class Player {
     field int shipGunXStart, shipGunYStart, shipGunWidth, shipGunHeight;
     field int shipTopXStart, shipTopYStart, shipTopWidth, shipTopHeight;
     field int shipMidXStart, shipMidYStart, shipMidWidth, shipMidHeight;
-    field int shipBaseWidth;
+    field int shipBotXStart, shipBotYStart, shipBotWidth, shipBotHeight;
     field int moveDist;
 
     constructor Player new(int Ax, int Ay) {
@@ -24,8 +24,12 @@ class Player {
         let shipMidYStart = 6;
         let shipMidWidth = 24;
         let shipMidHeight = 2;
+
+        let shipBotXStart = 0;
+        let shipBotYStart = 8;
+        let shipBotWidth = 28;
+        let shipBotHeight = 10;
         
-        let shipBaseWidth = 26;
         let moveDist = 2;
         return this;
     }
@@ -41,6 +45,7 @@ class Player {
         do Screen.drawRectangle(x + shipGunXStart, y + shipGunYStart, x + shipGunXStart + shipGunWidth, y + shipGunYStart + shipGunHeight);
         do Screen.drawRectangle(x + shipTopXStart, y + shipTopYStart, x + shipTopXStart + shipTopWidth, y + shipTopYStart + shipTopHeight);
         do Screen.drawRectangle(x + shipMidXStart, y + shipMidYStart, x + shipMidXStart + shipMidWidth, y + shipMidYStart + shipMidHeight);
+        do Screen.drawRectangle(x + shipBotXStart, y + shipBotYStart, x + shipBotXStart + shipBotWidth, y + shipBotYStart + shipBotHeight);
         return;
     }
 
@@ -49,6 +54,7 @@ class Player {
         do Screen.drawRectangle(x + shipGunXStart, y + shipGunYStart, x + shipGunXStart + shipGunWidth, y + shipGunYStart + shipGunHeight);
         do Screen.drawRectangle(x + shipTopXStart, y + shipTopYStart, x + shipTopXStart + shipTopWidth, y + shipTopYStart + shipTopHeight);
         do Screen.drawRectangle(x + shipMidXStart, y + shipMidYStart, x + shipMidXStart + shipMidWidth, y + shipMidYStart + shipMidHeight);
+        do Screen.drawRectangle(x + shipBotXStart, y + shipBotYStart, x + shipBotXStart + shipBotWidth, y + shipBotYStart + shipBotHeight);
         return;
     }
 
@@ -62,7 +68,7 @@ class Player {
     }
 
     method void moveRight() {
-        if (x < (511 - shipBaseWidth - moveDist)) {
+        if (x < (511 - shipBotWidth - moveDist)) {
             do erase();
             let x = x + moveDist;
             do draw();
