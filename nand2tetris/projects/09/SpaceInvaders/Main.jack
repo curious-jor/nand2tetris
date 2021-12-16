@@ -2,7 +2,6 @@ class Main {
     function void main() {
         // Draw ship
         var int xMax, yMax, xHalf, yHalf;
-        var int bulletX, bulletY, bulletLength, bulletWidth, bulletGap;
         var Player player;
         var char key;
         var boolean exit;
@@ -20,35 +19,14 @@ class Main {
                 let key = Keyboard.keyPressed();
                 if (key = 130) { do player.moveLeft();}   // left arrow
                 if (key = 132) { do player.moveRight(); }   // right arrow
-                if (key = 32) { // space
-                    // draw bullet
-                    
-                    let bulletWidth = 8;
-                    let bulletLength = 6;
-                    let bulletGap = 4;
-                    let bulletX = player.getShipTopLeft();
-                    let bulletY = player.getY() - bulletGap - bulletWidth;
-                    
-                    do Screen.drawRectangle(bulletX, bulletY, bulletX + bulletLength, bulletY + bulletWidth);
-                } 
+                 
                 do Sys.wait(4);
             }
             if (key = 81)  { let exit = true; }     // q key
             while (~(key = 0)) {
                 let key = Keyboard.keyPressed();
                 if (key = 130) { do player.moveLeft();}   // left arrow
-                if (key = 132) { do player.moveRight(); }   // right arrow
-                if (key = 32) { // space
-                    // draw bullet
-                    
-                    let bulletWidth = 8;
-                    let bulletLength = 6;
-                    let bulletGap = 4;
-                    let bulletX = player.getShipTopLeft();
-                    let bulletY = player.getY() - bulletGap - bulletWidth;
-                    
-                    do Screen.drawRectangle(bulletX, bulletY, bulletX + bulletLength, bulletY + bulletWidth);
-                } 
+                if (key = 132) { do player.moveRight(); }   // right arrow 
                 do Sys.wait(4);
              }
         } // while
