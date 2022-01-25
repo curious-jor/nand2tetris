@@ -60,18 +60,34 @@ class Player {
 
     method void moveLeft() {
         if (x > 1) {
-            do erase();
+            do Screen.setColor(false);
+            do Screen.drawRectangle(x + shipGunXStart + shipGunWidth - 1, y + shipGunYStart, x + shipGunXStart + shipGunWidth, y + shipGunYStart + shipGunHeight);
+            do Screen.drawRectangle(x + shipTopXStart + shipTopWidth - 1, y + shipTopYStart, x + shipTopXStart + shipTopWidth, y + shipTopYStart + shipTopHeight);
+            do Screen.drawRectangle(x + shipMidXStart + shipMidWidth - 1, y + shipMidYStart, x + shipMidXStart + shipMidWidth, y + shipMidYStart + shipMidHeight);
+            do Screen.drawRectangle(x + shipBotXStart + shipBotWidth - 1, y + shipBotYStart, x + shipBotXStart + shipBotWidth, y + shipBotYStart + shipBotHeight);
             let x = x - moveDist;
-            do draw();
+            do Screen.setColor(true);
+            do Screen.drawRectangle(x + shipGunXStart, y + shipGunYStart, x + shipGunXStart + 1, y + shipGunYStart + shipGunHeight);
+            do Screen.drawRectangle(x + shipTopXStart, y + shipTopYStart, x + shipTopXStart + 1, y + shipTopYStart + shipTopHeight);
+            do Screen.drawRectangle(x + shipMidXStart, y + shipMidYStart, x + shipMidXStart + 1, y + shipMidYStart + shipMidHeight);
+            do Screen.drawRectangle(x + shipBotXStart, y + shipBotYStart, x + shipBotXStart + 1, y + shipBotYStart + shipBotHeight);
         }
         return;
     }
 
     method void moveRight() {
         if (x < (511 - shipBotWidth - moveDist)) {
-            do erase();
+            do Screen.setColor(false);
+            do Screen.drawRectangle(x + shipGunXStart, y + shipGunYStart, x + shipGunXStart + 1, y + shipGunYStart + shipGunHeight);
+            do Screen.drawRectangle(x + shipTopXStart, y + shipTopYStart, x + shipTopXStart + 1, y + shipTopYStart + shipTopHeight);
+            do Screen.drawRectangle(x + shipMidXStart, y + shipMidYStart, x + shipMidXStart + 1, y + shipMidYStart + shipMidHeight);
+            do Screen.drawRectangle(x + shipBotXStart, y + shipBotYStart, x + shipBotXStart + 1, y + shipBotYStart + shipBotHeight);
             let x = x + moveDist;
-            do draw();
+            do Screen.setColor(true);
+            do Screen.drawRectangle(x + shipGunXStart + shipGunWidth - 1, y + shipGunYStart, x + shipGunXStart + shipGunWidth, y + shipGunYStart + shipGunHeight);
+            do Screen.drawRectangle(x + shipTopXStart + shipTopWidth - 1, y + shipTopYStart, x + shipTopXStart + shipTopWidth, y + shipTopYStart + shipTopHeight);
+            do Screen.drawRectangle(x + shipMidXStart + shipMidWidth - 1, y + shipMidYStart, x + shipMidXStart + shipMidWidth, y + shipMidYStart + shipMidHeight);
+            do Screen.drawRectangle(x + shipBotXStart + shipBotWidth - 1, y + shipBotYStart, x + shipBotXStart + shipBotWidth, y + shipBotYStart + shipBotHeight);
         }
         return;
     }
