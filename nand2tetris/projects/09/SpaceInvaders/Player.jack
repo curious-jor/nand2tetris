@@ -92,4 +92,23 @@ class Player {
         return;
     }
 
+    method int getX() {
+        return x;
+    }
+
+    method int getY() {
+        return y;
+    }
+
+    method int getShipGunX() {
+        return shipGunXStart;
+    }
+
+    method int getShipGunY() {
+        return shipGunYStart;
+    }
+    
+    method int getShipGunWidth() {
+        return shipGunWidth;
+    }
 }
