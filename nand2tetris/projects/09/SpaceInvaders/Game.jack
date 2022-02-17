@@ -1,0 +1,105 @@
+/*
+Class containing data and methods to run the Space Invaders game.
+*/
+class Game {
+    field int xMax, yMax, xHalf;
+    field Player player;
+    field boolean exit;
+    field int bulletX, bulletY, bulletHeight, bulletWidth;
+    field boolean isBulletOnscreen;
+
+    constructor Game new() {
+        do Screen.clearScreen();
+        let xMax = 511;
+        let yMax = 255;
+        let xHalf = xMax / 2;
+        let player = Player.new(xHalf - 13, yMax - 18);
+        let exit = false;
+        let bulletX = 0;
+        let bulletY = 0;
+        let bulletWidth = 2;
+        let bulletHeight = 8;
+        let isBulletOnscreen = false;
+
+        do player.draw();
+
+        return this;
+    }
+
+    method void dispose() {
+        do player.dispose();
+        do memory.deAlloc(this);
+        return;
+    }
+
+    method void run() {
+        var char key;
+        let key = 0;
+
+        while (~exit) {
+            do bulletMove();
+            while ((key = 0) & (~exit)) { 
+                let key = Keyboard.keyPressed();
+                if (key = 130) { do player.setDirection(1); do player.move();}
+                if (key = 132) { do player.setDirection(2); do player.move();}
+                if (key = 32) { do drawBullet();}
+                do bulletMove();
+                do Sys.wait(10);
+            }
+
+            if (key = 130) { do player.setDirection(1); do player.move();}
+            if (key = 132) { do player.setDirection(2); do player.move();}
+            if (key = 32) { do drawBullet();}
+            if (key = 140) { let exit = true; }
+
+            while ((~(key = 0)) & (~exit)) {
+                let key = Keyboard.keyPressed();
+                if (key = 130) { do player.setDirection(1); do player.move();}
+                if (key = 132) { do player.setDirection(2); do player.move();}
+                if (key = 32) { do drawBullet();}
+                do bulletMove();
+                do Sys.wait(10);
+            }
+        }
+        return;
+    }
+
+    method void bulletMove() {
+        if (~(isBulletOnscreen)) {
+            return;
+        }
+
+        do Screen.setColor(false);
+        do Screen.drawRectangle(bulletX, bulletY, bulletX + bulletWidth, bulletY + bulletHeight);
+        let bulletY = bulletY - 1;
+                    
+        if (bulletY < 0 | bulletY = 0) {
+            let isBulletOnscreen = false;
+        }
+        if (bulletY > 0) {
+            do Screen.setColor(true);
+            do Screen.drawRectangle(bulletX, bulletY, bulletX + bulletWidth, bulletY + bulletHeight);
+        }
+
+        return;
+    }
+
+    method void drawBullet() {
+        if (isBulletOnscreen) {
+            return;
+        }
+
+        let isBulletOnscreen = true;
+        do Screen.setColor(true);
+        let bulletX = player.getX() + player.getShipGunX() + 1;
+        let bulletY = player.getY() + player.getShipGunY() - 10; 
+        do Screen.drawRectangle(
+            bulletX, 
+            bulletY, 
+            bulletX + bulletWidth, 
+            bulletY + bulletHeight
+        );
+
+        return;
+    }
+}
