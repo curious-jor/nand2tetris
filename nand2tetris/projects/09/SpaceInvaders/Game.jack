@@ -88,11 +88,13 @@ class Game {
         }
 
         do Screen.setColor(false);
-        do Screen.drawRectangle(bulletX, bulletY, bulletX + bulletWidth, bulletY + bulletHeight);
+        do Screen.drawRectangle(bulletX, bulletY + bulletHeight - 1, bulletX + bulletWidth, bulletY + bulletHeight);
         let bulletY = bulletY - 1;
                     
         if (bulletY < 0 | bulletY = 0) {
             let isBulletOnscreen = false;
+            do Screen.setColor(false);
+            do Screen.drawRectangle(bulletX, bulletY, bulletX + bulletWidth, bulletY + bulletHeight);
         }
         if (bulletY > 0) {
             do Screen.setColor(true);
