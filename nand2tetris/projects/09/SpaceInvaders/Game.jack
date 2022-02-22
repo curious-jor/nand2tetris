@@ -28,7 +28,7 @@ class Game {
 
     method void dispose() {
         do player.dispose();
-        do memory.deAlloc(this);
+        do Memory.deAlloc(this);
         return;
     }
 
@@ -40,23 +40,41 @@ class Game {
             do bulletMove();
             while ((key = 0) & (~exit)) { 
                 let key = Keyboard.keyPressed();
-                if (key = 130) { do player.setDirection(1); do player.move();}
-                if (key = 132) { do player.setDirection(2); do player.move();}
-                if (key = 32) { do drawBullet();}
+                if (key = 130) { // Left arrow 
+                    do player.setDirection(1); do player.move();
+                }
+                if (key = 132) { // Right arrow
+                    do player.setDirection(2); do player.move();
+                }
+                if (key = 32) { // Space
+                    do drawBullet();
+                }
                 do bulletMove();
                 do Sys.wait(10);
             }
 
-            if (key = 130) { do player.setDirection(1); do player.move();}
-            if (key = 132) { do player.setDirection(2); do player.move();}
-            if (key = 32) { do drawBullet();}
-            if (key = 140) { let exit = true; }
+            if (key = 140) { // Esc
+                let exit = true; 
+            }
+            if (key = 130) { // Left arrow 
+                do player.setDirection(1); do player.move();
+            }
+            if (key = 132) { // Right arrow
+                do player.setDirection(2); do player.move();
+            }
 
-            while ((~(key = 0)) & (~exit)) {
+
+            while (~(key = 0) & (~exit)) {
                 let key = Keyboard.keyPressed();
-                if (key = 130) { do player.setDirection(1); do player.move();}
-                if (key = 132) { do player.setDirection(2); do player.move();}
-                if (key = 32) { do drawBullet();}
+                if (key = 130) { // Left arrow 
+                    do player.setDirection(1); do player.move();
+                }
+                if (key = 132) { // Right arrow
+                    do player.setDirection(2); do player.move();
+                }
+                if (key = 32) { // Space
+                    do drawBullet();
+                }
                 do bulletMove();
                 do Sys.wait(10);
             }
