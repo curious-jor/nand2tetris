@@ -7,13 +7,20 @@ class Game {
     field boolean exit;
     field int bulletX, bulletY, bulletHeight, bulletWidth;
     field boolean isBulletOnscreen;
+    field int scoreLineX, scoreLineY, scoreLineWidth, scoreLineHeight;
 
     constructor Game new() {
         do Screen.clearScreen();
         let xMax = 511;
         let yMax = 255;
         let xHalf = xMax / 2;
-        let player = Player.new(xHalf - 13, yMax - 18);
+
+        let scoreLineX = 0;
+        let scoreLineY = 238;
+        let scoreLineWidth = 511;
+        let scoreLineHeight = 2;
+        let player = Player.new(xHalf - 14, scoreLineY - (18 + scoreLineHeight));
+        
         let exit = false;
         let bulletX = 0;
         let bulletY = 0;
@@ -21,6 +28,8 @@ class Game {
         let bulletHeight = 8;
         let isBulletOnscreen = false;
 
+        // Draw a line to list score and lives below.
+        do Screen.drawRectangle(0, 238, 511, 240);
         do player.draw();
 
         return this;
