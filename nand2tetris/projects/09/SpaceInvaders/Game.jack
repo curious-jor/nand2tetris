@@ -29,7 +29,7 @@ class Game {
         let isBulletOnscreen = false;
 
         // Draw a line to list score and lives below.
-        do Screen.drawRectangle(0, 238, 511, 240);
+        do Screen.drawRectangle(scoreLineX, scoreLineY, scoreLineX + scoreLineWidth, scoreLineY + scoreLineHeight);
         do player.draw();
 
         return this;
